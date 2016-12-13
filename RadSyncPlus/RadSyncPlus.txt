@@ -1,0 +1,45 @@
+BO BS OS
+
+S  S  S  Nothing to do - all the same.
+S  S  D  Error should never happen.
+S  D  S  Error should never happen.
+S  D  D  Just update the save.
+D  S  S  Error should never happen.
+D  S  D  Copy orig to backup. Update saved with orig.
+D  D  S  Copy backup to orig. Update saved with backup.
+D  D  D  Both changed. Dont do anyhting.
+
+
+Missing from S (saved)
+
+BO
+
+S  Update saved with orig (or backup - both the same)
+D  Problem? Take the latest?
+
+
+Missing from B (backup)
+
+OS
+
+S  Delete from orig, Remove from saved.
+D  Problem? Delete from orig? Remove from saved?
+
+Missing from O (orig)
+
+BS
+
+S  Delete from backup. Remove from saved.
+D  Problem? Delete from backup? Remove from saved?
+
+Missing from S and B
+
+Copy from orig to backup. Add to saved.
+
+Missing from B and O
+
+Problem? Remove from saved.
+
+Missing from S and O
+
+Copy from backup to orig. Add to saved.

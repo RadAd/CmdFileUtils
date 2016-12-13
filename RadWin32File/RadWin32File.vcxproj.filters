@@ -1,0 +1,39 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Win">
+      <UniqueIdentifier>{57c62b58-cb57-4043-aae7-71e29dbd3407}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="About">
+      <UniqueIdentifier>{46fe133f-0d77-4072-9c13-e3c732fdc674}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Rad\Win\WinFile.H">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="Rad\Win\WinHandle.h">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="Rad\Win\WinInetFile.h">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="Rad\Win\WinInetHandle.h">
+      <Filter>Win</Filter>
+    </ClInclude>
+    <ClInclude Include="Rad\About\AboutMessage.h">
+      <Filter>About</Filter>
+    </ClInclude>
+    <ClInclude Include="Rad\Directory.h" />
+    <ClInclude Include="Rad\DirHelper.h" />
+    <ClInclude Include="Rad\ConsoleUtils.h" />
+    <ClInclude Include="Rad\NumberFormat.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Rad\About\AboutMessage.cpp">
+      <Filter>About</Filter>
+    </ClCompile>
+    <ClCompile Include="Rad\DirHelper.cpp" />
+    <ClCompile Include="Rad\NumberFormat.cpp" />
+  </ItemGroup>
+</Project>
