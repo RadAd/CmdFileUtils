@@ -73,18 +73,18 @@ void DisplayPadding(int Count)
 
 void DisplayTime(const FILETIME& time)
 {
-    FILETIME	lft;
-    SYSTEMTIME	st;
-    if (FileTimeToLocalFileTime(&time, &lft) == 0)
+    SYSTEMTIME stUTC, stLocal;
+    if (FileTimeToSystemTime(&time, &stUTC) == 0)
         rad::ThrowWinError();
-    if (FileTimeToSystemTime(&lft, &st) == 0)
+    if (SystemTimeToTzSpecificLocalTime(NULL, &stUTC, &stLocal) == 0)
         rad::ThrowWinError();
+
 
     TCHAR Date[1024];
-    /*int Length =*/ GetDateFormat(LOCALE_USER_DEFAULT, DATE_SHORTDATE, &st, NULL, Date, ARRAYSIZE(Date));
+    /*int Length =*/ GetDateFormat(LOCALE_USER_DEFAULT, DATE_SHORTDATE, &stLocal, NULL, Date, ARRAYSIZE(Date));
 
     TCHAR Time[1024];
-    /*int Length =*/ GetTimeFormat(LOCALE_USER_DEFAULT, TIME_NOSECONDS, &st, NULL, Time, ARRAYSIZE(Time));
+    /*int Length =*/ GetTimeFormat(LOCALE_USER_DEFAULT, TIME_NOSECONDS, &stLocal, NULL, Time, ARRAYSIZE(Time));
 
     _tprintf(_T("%10s %8s"), Date, Time);
 }

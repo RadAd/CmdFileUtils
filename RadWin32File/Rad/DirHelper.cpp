@@ -414,16 +414,16 @@ void Url::SetTime(const FILETIME* lpCreationTime, const FILETIME* lpLastAccessTi
     case INTERNET_SCHEME_FTP:
         {
             // MDTM [YYYYMMDDHHMMSS] filename.ext
-            SYSTEMTIME    st;
-            //if (FileTimeToLocalFileTime(lpLastWriteTime, &lft) == 0)
-                //ThrowWinError();
-            if (FileTimeToSystemTime(lpLastWriteTime, &st) == 0)
+            SYSTEMTIME stUTC, stLocal;
+            if (FileTimeToSystemTime(lpLastWriteTime, &stUTC) == 0)
+                rad::ThrowWinError();
+            if (SystemTimeToTzSpecificLocalTime(NULL, &stUTC, &stLocal) == 0)
                 rad::ThrowWinError();
 
             TCHAR Date[1024];
-            /*int LengthD =*/ GetDateFormat(LOCALE_USER_DEFAULT, 0, &st, TEXT("yyyyMMdd"), Date, 1024);
+            /*int LengthD =*/ GetDateFormat(LOCALE_USER_DEFAULT, 0, &stLocal, TEXT("yyyyMMdd"), Date, 1024);
             TCHAR Time[1024];
-            /*int LengthT =*/ GetTimeFormat(LOCALE_USER_DEFAULT, 0, &st, TEXT("HHmmss"), Time, 1024);
+            /*int LengthT =*/ GetTimeFormat(LOCALE_USER_DEFAULT, 0, &stLocal, TEXT("HHmmss"), Time, 1024);
 
             TCHAR Command[1024];
             _stprintf_s(Command, TEXT("MFMT %s%s %s"), Date, Time, GetPath() + 1);
