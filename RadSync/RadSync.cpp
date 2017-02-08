@@ -134,7 +134,14 @@ void SyncDirectories(const Url& dirA, const std::vector<CDirectory::CEntry>& dir
                     if (options.hidden || !dirlistB_it->IsHidden())
                     {
                         _tprintf(_T(" X %s\n"), dirlistB_it->GetFileName());
-                        SyncDeleteFileDir(*dirlistB_it, dirB, options);
+                        try
+                        {
+                            SyncDeleteFileDir(*dirlistB_it, dirB, options);
+                        }
+                        catch (const rad::WinError& e)
+                        {
+                            _ftprintf(stderr, e.GetString().c_str());
+                        }
                     }
                     ++dirlistB_it;
                 }
@@ -143,7 +150,14 @@ void SyncDirectories(const Url& dirA, const std::vector<CDirectory::CEntry>& dir
                     if (options.hidden || !dirlistA_it->IsHidden())
                     {
                         _tprintf(_T(" > %s\n"), dirlistA_it->GetFileName());
-                        SyncCopyFileDir(dirA, *dirlistA_it, dirB, options);
+                        try
+                        {
+                            SyncCopyFileDir(dirA, *dirlistA_it, dirB, options);
+                        }
+                        catch (const rad::WinError& e)
+                        {
+                            _ftprintf(stderr, e.GetString().c_str());
+                        }
                     }
                     ++dirlistA_it;
                 }
@@ -163,7 +177,14 @@ void SyncDirectories(const Url& dirA, const std::vector<CDirectory::CEntry>& dir
                                     _tprintf(_T(" > %s\n"), dirlistA_it->GetFileName());
                                     if (!options.test)
                                     {
-                                        CopyFile(dirA, dirB, *dirlistA_it, &options.nf);
+                                        try
+                                        {
+                                            CopyFile(dirA, dirB, *dirlistA_it, &options.nf);
+                                        }
+                                        catch (const rad::WinError& e)
+                                        {
+                                            _ftprintf(stderr, e.GetString().c_str());
+                                        }
                                     }
                                 }
                                 else if (dirlistA_it->GetFileSize().QuadPart != dirlistB_it->GetFileSize().QuadPart)
