@@ -92,8 +92,8 @@ public:
     {
     }
 
-    bool operator()(const CDirectory::CEntry& left, const CDirectory::CEntry& right);
-    bool Compare(const CDirectory::CEntry& left, const CDirectory::CEntry& right);
+    bool operator()(const CDirectory::CEntry& left, const CDirectory::CEntry& right) const;
+    bool Compare(const CDirectory::CEntry& left, const CDirectory::CEntry& right) const;
     static bool CompareName(const CDirectory::CEntry& left, const CDirectory::CEntry& right);
     static bool CompareSize(const CDirectory::CEntry& left, const CDirectory::CEntry& right);
     static bool CompareDate(const CDirectory::CEntry& left, const CDirectory::CEntry& right);

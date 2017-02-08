@@ -787,7 +787,7 @@ void GetDirectory(const Url& url, std::vector<CDirectory::CEntry>& dirlist, bool
     }
 }
 
-bool DirSorter::operator()(const CDirectory::CEntry& left, const CDirectory::CEntry& right)
+bool DirSorter::operator()(const CDirectory::CEntry& left, const CDirectory::CEntry& right) const
 {
     if (m_DirFirst && left.IsDirectory() && right.IsDirectory())
         return Compare(left, right);
@@ -799,7 +799,7 @@ bool DirSorter::operator()(const CDirectory::CEntry& left, const CDirectory::CEn
         return Compare(left, right);
 }
 
-bool DirSorter::Compare(const CDirectory::CEntry& left, const CDirectory::CEntry& right)
+bool DirSorter::Compare(const CDirectory::CEntry& left, const CDirectory::CEntry& right) const
 {
     switch(m_Order)
     {
