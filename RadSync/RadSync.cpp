@@ -20,7 +20,7 @@ void DisplayWelcomeMessage()
     TCHAR* options[][2] = {
         { TEXT("t"),  TEXT("Test - do not change anything") },
         { TEXT("h"),  TEXT("Hidden - copy hidden files as well") },
-        // { TEXT("d"),  TEXT("Delete - delete files in destination") }, TODO
+        { TEXT("d"),  TEXT("Delete - delete files in destination") },
     };
     for (int i = 0; i < ARRAYSIZE(options); ++i)
     {
@@ -42,12 +42,14 @@ struct Options
         : nf(LOCALE_USER_DEFAULT)
         , test(false)
         , hidden(false)
+        , dodelete(false)
     {
     }
 
     NumberFormat nf;
     bool test;
     bool hidden;
+    bool dodelete;
 };
 
 void SyncDirectories(Url dirA, Url dirB, const Options& options);
@@ -74,119 +76,150 @@ void SyncCopyFileDir(const Url& source, const CDirectory::CEntry& source_entry, 
     }
 }
 
+void SyncDeleteFileDir(const CDirectory::CEntry& source_entry, const Url& destination, const Options& options)
+{
+    if (source_entry.IsDirectory())
+    {
+        //_tprintf(_T("Delete directory %s from %s to %s\n"), source_entry.GetFileName(), source.GetUrl(), destination.GetUrl());
+        if (!options.test && options.dodelete)
+        {
+            Url subdirdest = destination + source_entry.GetFileName();
+            // TODO Need to empty directory
+            subdirdest.DeleteDirectory();
+        }
+    }
+    else
+    {
+        //_tprintf(_T("Delete file %s from %s to %s\n"), source_entry.GetFileName(), source.GetUrl(), destination.GetUrl());
+        if (!options.test && options.dodelete)
+        {
+            DeleteFile(destination, source_entry);
+        }
+    }
+}
+
 void SyncDirectories(const Url& dirA, const std::vector<CDirectory::CEntry>& dirlistA, const Url& dirB, const std::vector<CDirectory::CEntry>& dirlistB, const Options& options)
 {
-    std::vector<CDirectory::CEntry>::const_iterator dirlistA_it = dirlistA.begin();
-    std::vector<CDirectory::CEntry>::const_iterator dirlistB_it = dirlistB.begin();
-
-    while (dirlistA_it != dirlistA.end() || dirlistB_it != dirlistB.end())
+    try
     {
-        if (dirlistA_it != dirlistA.end() && _tcscmp(dirlistA_it->GetFileName(), TEXT(".")) == 0)
-            ++dirlistA_it;
-        else if (dirlistA_it != dirlistA.end() && _tcscmp(dirlistA_it->GetFileName(), TEXT("..")) == 0)
-            ++dirlistA_it;
-        else if (dirlistB_it != dirlistB.end() && _tcscmp(dirlistB_it->GetFileName(), TEXT(".")) == 0)
-            ++dirlistB_it;
-        else if (dirlistB_it != dirlistB.end() && _tcscmp(dirlistB_it->GetFileName(), TEXT("..")) == 0)
-            ++dirlistB_it;
-        else
+        std::vector<CDirectory::CEntry>::const_iterator dirlistA_it = dirlistA.begin();
+        std::vector<CDirectory::CEntry>::const_iterator dirlistB_it = dirlistB.begin();
+
+        while (dirlistA_it != dirlistA.end() || dirlistB_it != dirlistB.end())
         {
-            int compare;
-            if (dirlistA_it == dirlistA.end())
-                compare = 1;
-            else if (dirlistB_it == dirlistB.end())
-                compare = -1;
+            if (dirlistA_it != dirlistA.end() && _tcscmp(dirlistA_it->GetFileName(), TEXT(".")) == 0)
+                ++dirlistA_it;
+            else if (dirlistA_it != dirlistA.end() && _tcscmp(dirlistA_it->GetFileName(), TEXT("..")) == 0)
+                ++dirlistA_it;
+            else if (dirlistB_it != dirlistB.end() && _tcscmp(dirlistB_it->GetFileName(), TEXT(".")) == 0)
+                ++dirlistB_it;
+            else if (dirlistB_it != dirlistB.end() && _tcscmp(dirlistB_it->GetFileName(), TEXT("..")) == 0)
+                ++dirlistB_it;
             else
-                compare = _tcsicmp(dirlistA_it->GetFileName(), dirlistB_it->GetFileName());
-            if (compare == 0)
-            {   // Same file name
-                if (!dirlistA_it->IsDirectory() && !dirlistB_it->IsDirectory())
-                {
-                    // TODO Hidden files? Sync anyway?
-                    if (dirlistA_it->nFileSizeHigh != dirlistB_it->nFileSizeHigh
-                        || dirlistA_it->nFileSizeLow != dirlistB_it->nFileSizeLow
-                        || dirlistA_it->ftLastWriteTime != dirlistB_it->ftLastWriteTime)
+            {
+                int compare;
+                if (dirlistA_it == dirlistA.end())
+                    compare = 1;
+                else if (dirlistB_it == dirlistB.end())
+                    compare = -1;
+                // TODO Should use DirSorter here
+                else if (dirlistA_it->IsDirectory() == dirlistB_it->IsDirectory())
+                    compare = _tcsicmp(dirlistA_it->GetFileName(), dirlistB_it->GetFileName());
+                else if (dirlistA_it->IsDirectory())
+                    compare = -1;
+                else //if (dirlistB_it->IsDirectory())
+                    compare = 1;
+                if (compare == 0)
+                {   // Same file name
+                    if (!dirlistA_it->IsDirectory() && !dirlistB_it->IsDirectory())
                     {
-                        // TODO Think about sync direction
+                        // TODO Hidden files? Sync anyway?
+                        if (dirlistA_it->nFileSizeHigh != dirlistB_it->nFileSizeHigh
+                            || dirlistA_it->nFileSizeLow != dirlistB_it->nFileSizeLow
+                            || dirlistA_it->ftLastWriteTime != dirlistB_it->ftLastWriteTime)
+                        {
+                            // TODO Think about sync direction
 #if 0
-                        if (dirlistA_it->ftLastWriteTime == dirlistB_it->ftLastWriteTime)
-                        {
-                            _tprintf(_T(" ! %s\n"), dirlistA_it->GetFileName());
-                            _tprintf(_T("Warning: File %s different size but same time.\n"), dirlistA_it->GetFileName());
-                        }
-                        else if (dirlistA_it->ftLastWriteTime > dirlistB_it->ftLastWriteTime)
-                        {
-                            _tprintf(_T(" > %s\n"), dirlistA_it->GetFileName());
-                            if (!options.test)
+                            if (dirlistA_it->ftLastWriteTime == dirlistB_it->ftLastWriteTime)
                             {
-                                CopyFile(dirA, dirB, *dirlistA_it, &options.nf);
+                                _tprintf(_T(" ! %s\n"), dirlistA_it->GetFileName());
+                                _tprintf(_T("Warning: File %s different size but same time.\n"), dirlistA_it->GetFileName());
                             }
-                        }
-                        else
-                        {
-                            _tprintf(_T(" < %s\n"), dirlistB_it->GetFileName());
-                            if (!options.test)
+                            else if (dirlistA_it->ftLastWriteTime > dirlistB_it->ftLastWriteTime)
                             {
-                                CopyFile(dirB, dirA, *dirlistB_it, &options.nf);
+                                _tprintf(_T(" > %s\n"), dirlistA_it->GetFileName());
+                                if (!options.test)
+                                {
+                                    CopyFile(dirA, dirB, *dirlistA_it, &options.nf);
+                                }
                             }
-                        }
+                            else
+                            {
+                                _tprintf(_T(" < %s\n"), dirlistB_it->GetFileName());
+                                if (!options.test)
+                                {
+                                    CopyFile(dirB, dirA, *dirlistB_it, &options.nf);
+                                }
+                            }
 #else
-                        if (dirlistA_it->ftLastWriteTime > dirlistB_it->ftLastWriteTime)
-                        {
-                            _tprintf(_T(" > %s\n"), dirlistA_it->GetFileName());
-                            if (!options.test)
+                            if (dirlistA_it->ftLastWriteTime > dirlistB_it->ftLastWriteTime)
                             {
-                                CopyFile(dirA, dirB, *dirlistA_it, &options.nf);
+                                _tprintf(_T(" > %s\n"), dirlistA_it->GetFileName());
+                                if (!options.test)
+                                {
+                                    CopyFile(dirA, dirB, *dirlistA_it, &options.nf);
+                                }
                             }
-                        }
-                        else if (dirlistA_it->nFileSizeHigh != dirlistB_it->nFileSizeHigh
-                            || dirlistA_it->nFileSizeLow != dirlistB_it->nFileSizeLow)
-                        {
-                            _tprintf(_T(" ! %s\n"), dirlistA_it->GetFileName());
-                            _tprintf(_T("Warning: File %s different size but destination has later time.\n"), dirlistA_it->GetFileName());
+                            else if (dirlistA_it->nFileSizeHigh != dirlistB_it->nFileSizeHigh
+                                || dirlistA_it->nFileSizeLow != dirlistB_it->nFileSizeLow)
+                            {
+                                _tprintf(_T(" ! %s\n"), dirlistA_it->GetFileName());
+                                _tprintf(_T("Warning: File %s different size but destination has later time.\n"), dirlistA_it->GetFileName());
+                            }
+                            //else
+                            //_tprintf(_T(" = %s\n"), dirlistA_it->GetFileName());
+#endif
                         }
                         //else
                         //_tprintf(_T(" = %s\n"), dirlistA_it->GetFileName());
-#endif
                     }
-                    //else
-                    //_tprintf(_T(" = %s\n"), dirlistA_it->GetFileName());
+                    else if (dirlistA_it->IsDirectory() && dirlistB_it->IsDirectory())
+                    {
+                        SyncDirectories(dirA + dirlistA_it->GetFileName(), dirB + dirlistB_it->GetFileName(), options);
+                    }
+                    else if (dirlistA_it->IsDirectory() != dirlistB_it->IsDirectory())
+                    {
+                        _tprintf(_T("Warning: File %s shares name with a directory.\n"), dirlistA_it->GetFileName());
+                    }
+                    ++dirlistA_it;
+                    ++dirlistB_it;
                 }
-                else if (dirlistA_it->IsDirectory() && dirlistB_it->IsDirectory())
+                else if (compare < 0)
                 {
-                    SyncDirectories(dirA + dirlistA_it->GetFileName(), dirB + dirlistB_it->GetFileName(), options);
+                    if (options.hidden || !dirlistA_it->IsHidden())
+                    {
+                        _tprintf(_T(" > %s\n"), dirlistA_it->GetFileName());
+                        SyncCopyFileDir(dirA, *dirlistA_it, dirB, options);
+                    }
+                    ++dirlistA_it;
                 }
-                else if (dirlistA_it->IsDirectory() != dirlistB_it->IsDirectory())
+                else //if (compare > 0)
                 {
-                    _tprintf(_T("Warning: File %s shares name with a directory.\n"), dirlistA_it->GetFileName());
+                    if (options.hidden || !dirlistB_it->IsHidden())
+                    {
+                        _tprintf(_T(" X %s\n"), dirlistB_it->GetFileName());
+                        SyncDeleteFileDir(*dirlistB_it, dirB, options);
+                    }
+                    ++dirlistB_it;
                 }
-                ++dirlistA_it;
-                ++dirlistB_it;
-            }
-            else if (compare < 0)
-            {
-                if (options.hidden || !dirlistA_it->IsHidden())
-                {
-                    _tprintf(_T(" > %s\n"), dirlistA_it->GetFileName());
-                    SyncCopyFileDir(dirA, *dirlistA_it, dirB, options);
-                }
-                ++dirlistA_it;
-            }
-            else //if (compare > 0)
-            {
-#if 0
-                if (hidden || !dirlistB_it->IsHidden())
-                {
-                    _tprintf(_T(" < %s\n"), dirlistB_it->GetFileName());
-                    SyncCopyFileDir(dirB, *dirlistB_it, dirA, test, hidden);
-                }
-#else
-                // TODO Delete desination file
-                _tprintf(_T(" X %s\n"), dirlistB_it->GetFileName());
-#endif
-                ++dirlistB_it;
             }
         }
+    }
+    catch (const rad::WinError& e)
+    {
+        // TODO This ends syncing the directory
+        // This should be caught for each for update
+        _ftprintf(stderr, e.GetString().c_str());
     }
 }
 
@@ -228,6 +261,7 @@ int tmain(int argc, TCHAR* argv[])
         {
             { TEXT('t'), &options.test },
             { TEXT('h'), &options.hidden },
+            { TEXT('d'), &options.dodelete },
             { TEXT('\0'), 0 }
         };
 
@@ -245,7 +279,7 @@ int tmain(int argc, TCHAR* argv[])
                 }
 
                 BoolArg* thisBoolArg = boolArg;
-                while (thisBoolArg->m_Char != argv[arg][Pos] && thisBoolArg->m_Char != TEXT('\0'))
+                while (thisBoolArg->m_Char != _totlower(argv[arg][Pos]) && thisBoolArg->m_Char != TEXT('\0'))
                     ++thisBoolArg;
                 if (thisBoolArg->m_Bool)
                     *(thisBoolArg->m_Bool) = Value;

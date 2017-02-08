@@ -123,13 +123,7 @@ RetCode HttpDownload(const CWinInetHandle& inet, const TCHAR* InputFile, const T
                 OFile.GetTime(NULL, NULL, &FileFileDate);
                 if (SystemTimeToFileTime(&SysFileDate, &UrlFileDate) == 0)
                     rad::ThrowWinError(TEXT("SystemTimeToFileTime : "));
-#ifdef _DEBUG
-                SYSTEMTIME stUTC, stLocal;
-                if (FileTimeToSystemTime(lpLastWriteTime, &stUTC) == 0)
-                    rad::ThrowWinError(TEXT("FileTimeToSystemTime : "));
-                if (SystemTimeToTzSpecificLocalTime(NULL, &stUTC, &stLocal) == 0)
-                    rad::ThrowWinError(TEXT("SystemTimeToTzSpecificLocalTime : "));
-#endif
+
                 if (FileFileDate > UrlFileDate)
                     Skip = true;
             }

@@ -71,6 +71,7 @@ private:
 };
 
 void CopyFile(const Url& source, const Url& destination, const CDirectory::CEntry& entry, const NUMBERFMT* nf);
+void DeleteFile(const Url& destination, const CDirectory::CEntry& entry);
 
 inline Url operator+(const Url& url, const std::tstring& subdir)
 {

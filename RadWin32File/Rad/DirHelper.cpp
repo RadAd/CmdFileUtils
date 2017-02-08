@@ -355,6 +355,12 @@ void CopyFile(const Url& source, const Url& destination, const CDirectory::CEntr
     destinationfile.SetTime(0, 0, &entry.ftLastWriteTime);
 }
 
+void DeleteFile(const Url& destination, const CDirectory::CEntry& entry)
+{
+    Url destinationfile = destination + entry.GetFileName();
+    destinationfile.DeleteFile();
+}
+
 void Url::Init(const TCHAR *url)
 {
     _tcscpy_s(m_Url, url);
@@ -414,22 +420,38 @@ void Url::SetTime(const FILETIME* lpCreationTime, const FILETIME* lpLastAccessTi
     case INTERNET_SCHEME_FTP:
         {
             // MDTM [YYYYMMDDHHMMSS] filename.ext
-            SYSTEMTIME stUTC, stLocal;
+            SYSTEMTIME stUTC;
             if (FileTimeToSystemTime(lpLastWriteTime, &stUTC) == 0)
                 rad::ThrowWinError();
+#if 0
+            SYSTEMTIME stLocal;
             if (SystemTimeToTzSpecificLocalTime(NULL, &stUTC, &stLocal) == 0)
                 rad::ThrowWinError();
+#endif
 
             TCHAR Date[1024];
-            /*int LengthD =*/ GetDateFormat(LOCALE_USER_DEFAULT, 0, &stLocal, TEXT("yyyyMMdd"), Date, 1024);
+            /*int LengthD =*/ GetDateFormat(LOCALE_USER_DEFAULT, 0, &stUTC, TEXT("yyyyMMdd"), Date, 1024);
             TCHAR Time[1024];
-            /*int LengthT =*/ GetTimeFormat(LOCALE_USER_DEFAULT, 0, &stLocal, TEXT("HHmmss"), Time, 1024);
+            /*int LengthT =*/ GetTimeFormat(LOCALE_USER_DEFAULT, 0, &stUTC, TEXT("HHmmss"), Time, 1024);
 
             TCHAR Command[1024];
-            _stprintf_s(Command, TEXT("MFMT %s%s %s"), Date, Time, GetPath() + 1);
+            //_stprintf_s(Command, TEXT("MFMT %s%s %s"), Date, Time, GetPath() + 1);
+            _stprintf_s(Command, TEXT("SITE UTIME %s%s %s"), Date, Time, GetPath() + 1);
             HINTERNET ftpCommand = NULL;
             if (FtpCommand(GetFtp(*this).Get(), FALSE, FTP_TRANSFER_TYPE_ASCII, Command, 0, &ftpCommand) == 0)
-                ThrowWinInetError();
+            {
+                //ThrowWinInetError();
+                _ftprintf(stderr, _T("Error executing FtpCommand: %s\n"), Command);
+                rad::WinError error(GetModuleHandle(TEXT("wininet.dll")));
+                if (error.GetError() == 12003) // The server returned extended information
+                {
+                    DWORD e;
+                    TCHAR Buffer[1024];
+                    DWORD s = 1024;
+                    InternetGetLastResponseInfo(&e, Buffer, &s);
+                    _ftprintf(stderr, Buffer);
+                }
+            }
             if (ftpCommand)
             {
                 CWinInetHandle ret(ftpCommand);
