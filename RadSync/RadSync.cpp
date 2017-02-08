@@ -84,7 +84,23 @@ void SyncDeleteFileDir(const CDirectory::CEntry& source_entry, const Url& destin
         if (!options.test && options.dodelete)
         {
             Url subdirdest = destination + source_entry.GetFileName();
-            // TODO Need to empty directory
+
+            std::vector<CDirectory::CEntry> dirlist;
+            subdirdest.AppendDelim();
+            GetDirectory(subdirdest, dirlist, true);
+
+            DirSorter dir_sorter(DirSorter::Name, true);
+            SortDirectory(dirlist, dir_sorter);
+
+            for (std::vector<CDirectory::CEntry>::const_iterator dirlist_it = dirlist.begin(); dirlist_it != dirlist.end(); ++dirlist_it)
+            {
+                if (!dirlist_it->IsDots())
+                {
+                    //_tprintf(_T(" X %s\n"), dirlist_it->GetFileName());
+                    SyncDeleteFileDir(*dirlist_it, subdirdest, options);
+                }
+            }
+
             subdirdest.DeleteDirectory();
         }
     }
@@ -107,13 +123,9 @@ void SyncDirectories(const Url& dirA, const std::vector<CDirectory::CEntry>& dir
 
         while (dirlistA_it != dirlistA.end() || dirlistB_it != dirlistB.end())
         {
-            if (dirlistA_it != dirlistA.end() && _tcscmp(dirlistA_it->GetFileName(), TEXT(".")) == 0)
+            if (dirlistA_it != dirlistA.end() && dirlistA_it->IsDots())
                 ++dirlistA_it;
-            else if (dirlistA_it != dirlistA.end() && _tcscmp(dirlistA_it->GetFileName(), TEXT("..")) == 0)
-                ++dirlistA_it;
-            else if (dirlistB_it != dirlistB.end() && _tcscmp(dirlistB_it->GetFileName(), TEXT(".")) == 0)
-                ++dirlistB_it;
-            else if (dirlistB_it != dirlistB.end() && _tcscmp(dirlistB_it->GetFileName(), TEXT("..")) == 0)
+            else if (dirlistB_it != dirlistB.end() && dirlistB_it->IsDots())
                 ++dirlistB_it;
             else
             {
