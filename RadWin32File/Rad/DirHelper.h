@@ -55,6 +55,7 @@ public:
     void DeleteDirectory() const;
     void RemoveAttr(DWORD RemAttr) const;
 
+    CWinInetHandle Connect() const;
     std::auto_ptr<FileRead> OpenFileRead() const;
     std::auto_ptr<FileWrite> OpenFileWrite(int buffer_size, bool Hidden) const;
     bool IsLocal() const { return nScheme == INTERNET_SCHEME_UNKNOWN || nScheme == INTERNET_SCHEME_DEFAULT; }

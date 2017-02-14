@@ -5,6 +5,7 @@
 #include <string>
 #include <algorithm>
 #include <TChar.H>
+#include <WinCred.H>
 #include <assert.h>
 
 #include "Win/WinInetHandle.h"
@@ -104,9 +105,7 @@ CWinInetHandle& GetInternet()
 // TODO Also doesnt check if it has been lost
 CWinInetHandle& GetFtp(const Url& url)
 {
-    static CWinInetHandle ftp = InternetConnect(GetInternet().Get(), url.lpszHostName, url.nPort, url.lpszUserName, url.lpszPassword, INTERNET_SERVICE_FTP, INTERNET_FLAG_PASSIVE, 0);
-    if (!ftp.Get())
-        ThrowWinInetError();
+    static CWinInetHandle ftp = url.Connect();
     return ftp;
 }
 
@@ -224,9 +223,7 @@ class FileWriteHttp : public FileWrite
 public:
     FileWriteHttp(const Url& url, int buffer_size)
     {
-        m_connect.Attach(InternetConnect(GetInternet().Get(), url.GetHost(), url.GetPort(), NULL, NULL, INTERNET_SERVICE_HTTP, 0, 0));
-        if (!m_connect.Get())
-            ThrowWinInetError();
+        m_connect = url.Connect();
         m_file.Attach(HttpOpenRequest(m_connect.Get(), TEXT("POST"), url.GetPath(), NULL, NULL, NULL, INTERNET_FLAG_NO_CACHE_WRITE , 0));
         if (!m_file.Get())
             ThrowWinInetError();
@@ -560,6 +557,44 @@ void Url::RemoveAttr(DWORD RemAttr) const
         if (SetFileAttributes(GetUrl(), Attr) == 0)
             rad::ThrowWinError(TEXT("SetFileAttributes : "));
     }
+}
+
+CWinInetHandle Url::Connect() const
+{
+    LPTSTR  sUserName = lpszUserName;
+    std::tstring  sPassword = lpszPassword;
+    PCREDENTIAL pCred = nullptr;
+    if (lpszUserName[0] == _T('\0') && CredRead((GetScheme() + std::tstring(_T("://")) + GetHost()).c_str(), CRED_TYPE_GENERIC, 0, &pCred))
+    {
+        sUserName = pCred->UserName;
+        sPassword = std::tstring((LPTSTR) pCred->CredentialBlob, pCred->CredentialBlobSize / sizeof(TCHAR));
+    }
+
+    DWORD dwService = 0;
+    DWORD dwFlags = 0;
+    switch (nScheme)
+    {
+    case INTERNET_SCHEME_FTP:
+        dwService = INTERNET_SERVICE_FTP;
+        dwFlags = INTERNET_FLAG_PASSIVE;
+        break;
+
+    case INTERNET_SCHEME_HTTP:
+    case INTERNET_SCHEME_HTTPS:
+        dwService = INTERNET_SERVICE_HTTP;
+        break;
+    }
+
+    CWinInetHandle ftp = InternetConnect(GetInternet().Get(), GetHost(), GetPort(), sUserName, sPassword.c_str(), dwService, dwFlags, 0);
+    SecureZeroMemory((PVOID) sPassword.data(), sPassword.size() * sizeof(TCHAR));
+
+    if (pCred != nullptr)
+        CredFree(pCred);
+
+    if (!ftp.Get())
+        ThrowWinInetError();
+
+    return ftp;
 }
 
 std::auto_ptr<FileRead> Url::OpenFileRead() const

@@ -69,7 +69,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>kernel32.lib;version.lib;wininet.lib</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;version.lib;wininet.lib;Advapi32.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

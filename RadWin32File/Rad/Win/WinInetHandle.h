@@ -34,60 +34,48 @@ inline void ThrowWinInetError(LPCTSTR msg)
         ThrowWinError(error);
 }
 
-class CWinInetHandle
+class WinInetHandleDeleter
+{
+public:
+    typedef HINTERNET pointer;
+    void operator()(HINTERNET Handle)
+    {
+        if (Handle != NULL)
+        {
+            if (!::InternetCloseHandle(Handle))
+                ThrowWinInetError();
+        }
+    }
+};
+
+// TODO Use a smart_ptr
+class CWinInetHandle : private std::unique_ptr<HINTERNET, WinInetHandleDeleter>
 {
 public:
     CWinInetHandle(HINTERNET Handle = NULL)
-        : m_Handle(Handle)
+        : std::unique_ptr<HINTERNET, WinInetHandleDeleter>(Handle)
     {
-    }
-
-    ~CWinInetHandle()
-    {
-        Close();
     }
 
     void Close()
     {
-        CloseHandle(Release());
-    }
-
-    CWinInetHandle & operator = (CWinInetHandle &Other)
-    {
-        Close();
-        m_Handle = Other.Release();
-        return *this;
+        release();
     }
 
     HINTERNET Get() const
     {
-        return m_Handle;
+        return get();
     }
 
     void Attach(HINTERNET Handle = NULL)
     {
-        Close();
-        m_Handle = Handle;
+        operator=(Handle);
     }
 
     HINTERNET Release()
     {
-        HINTERNET	Handle = m_Handle;
-        m_Handle = NULL;
-        return Handle;
+        return release();
     }
-
-    static void CloseHandle(HINTERNET Handle)
-    {
-        if (Handle != NULL)
-        {
-            if (::InternetCloseHandle(Handle) == 0)
-                ThrowWinInetError();
-        }
-    }
-
-private:
-    HINTERNET	m_Handle;
 };
 
 #endif

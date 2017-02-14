@@ -10,9 +10,9 @@ public:
     typedef HANDLE pointer;
     void operator()(HANDLE Handle)
     {
-        if (Handle != 0 && Handle != INVALID_HANDLE_VALUE)
+        if (Handle != NULL && Handle != INVALID_HANDLE_VALUE)
         {
-            if (::CloseHandle(Handle) == 0)
+            if (!::CloseHandle(Handle))
                 rad::ThrowWinError();
         }
     }
