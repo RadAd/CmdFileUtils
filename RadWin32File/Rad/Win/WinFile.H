@@ -1,7 +1,7 @@
 #ifndef WINFILE_H
 #define WINFILE_H
 
-#include "WinHandle.H"
+#include <Rad/Win/WinHandle.h>
 
 class CWinFile
 {
@@ -11,7 +11,7 @@ public:
 
     void Open(const TCHAR *FileName, DWORD Access, DWORD Share, DWORD CreationDisposition, DWORD Attributes = FILE_ATTRIBUTE_NORMAL)
     {
-        m_File = CWinHandle(CreateFile(FileName, Access, Share, NULL, CreationDisposition, Attributes, NULL));
+        m_File = rad::WinHandle(CreateFile(FileName, Access, Share, NULL, CreationDisposition, Attributes, NULL));
         if (CreationDisposition != OPEN_EXISTING && !IsOpen())
             rad::ThrowWinError(TEXT("CreateFile : "));
     }
@@ -67,7 +67,7 @@ public:
     }
 
 private:
-    CWinHandle	m_File;
+    rad::WinHandle	m_File;
 };
 
 #endif

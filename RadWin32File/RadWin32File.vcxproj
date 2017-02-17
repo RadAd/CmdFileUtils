@@ -25,7 +25,6 @@
     <ClInclude Include="Rad\DirHelper.h" />
     <ClInclude Include="Rad\NumberFormat.h" />
     <ClInclude Include="Rad\Win\WinFile.H" />
-    <ClInclude Include="Rad\Win\WinHandle.h" />
     <ClInclude Include="Rad\Win\WinInetFile.h" />
     <ClInclude Include="Rad\Win\WinInetHandle.h" />
   </ItemGroup>

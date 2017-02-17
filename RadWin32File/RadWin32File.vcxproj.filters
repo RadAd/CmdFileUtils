@@ -12,9 +12,6 @@
     <ClInclude Include="Rad\Win\WinFile.H">
       <Filter>Win</Filter>
     </ClInclude>
-    <ClInclude Include="Rad\Win\WinHandle.h">
-      <Filter>Win</Filter>
-    </ClInclude>
     <ClInclude Include="Rad\Win\WinInetFile.h">
       <Filter>Win</Filter>
     </ClInclude>

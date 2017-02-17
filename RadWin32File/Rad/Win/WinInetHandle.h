@@ -34,26 +34,20 @@ inline void ThrowWinInetError(LPCTSTR msg)
         ThrowWinError(error);
 }
 
-class WinInetHandleDeleter
+inline void CheckInternetCloseHandle(HANDLE Handle)
 {
-public:
-    typedef HINTERNET pointer;
-    void operator()(HINTERNET Handle)
+    if (Handle != NULL)
     {
-        if (Handle != NULL)
-        {
-            if (!::InternetCloseHandle(Handle))
-                ThrowWinInetError();
-        }
+        if (!::InternetCloseHandle(Handle))
+            ThrowWinInetError();
     }
-};
+}
 
-// TODO Use a smart_ptr
-class CWinInetHandle : private std::unique_ptr<HINTERNET, WinInetHandleDeleter>
+class CWinInetHandle : private std::unique_ptr<HINTERNET, rad::WinHandleDeleter<HINTERNET, CheckInternetCloseHandle>>
 {
 public:
     CWinInetHandle(HINTERNET Handle = NULL)
-        : std::unique_ptr<HINTERNET, WinInetHandleDeleter>(Handle)
+        : std::unique_ptr<HINTERNET, rad::WinHandleDeleter<HINTERNET, CheckInternetCloseHandle>>(Handle)
     {
     }
 
