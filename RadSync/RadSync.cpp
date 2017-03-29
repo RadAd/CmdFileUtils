@@ -163,7 +163,7 @@ void SyncDirectories(const Url& dirA, const std::vector<CDirectory::CEntry>& dir
                 }
                 else
                 {
-                    assert(dirlistA_it->GetFileName() == dirlistB_it->GetFileName());
+                    assert(_tcscmp(dirlistA_it->GetFileName(), dirlistB_it->GetFileName()) == 0);
                     assert(dirlistA_it->IsDirectory() == dirlistB_it->IsDirectory());
                     if (!dirlistA_it->IsDirectory()) //&& !dirlistB_it->IsDirectory())
                     {

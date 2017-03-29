@@ -434,7 +434,7 @@ void Url::SetTime(const FILETIME* lpCreationTime, const FILETIME* lpLastAccessTi
             TCHAR Command[1024];
             //_stprintf_s(Command, TEXT("MFMT %s%s %s"), Date, Time, GetPath() + 1);
             //_stprintf_s(Command, TEXT("SITE UTIME %s%s %s"), Date, Time, GetPath() + 1);
-            _stprintf_s(Command, TEXT("SITE UTIME %s %s%s %s%s %s%s UTC"), GetPath() + 1, Date, Time, Date, Time, Date, Time);
+            _stprintf_s(Command, TEXT("SITE UTIME %s %s%s %s%s %s%s UTC"), GetPath(), Date, Time, Date, Time, Date, Time);
             HINTERNET ftpCommand = NULL;
             if (FtpCommand(GetFtp(*this).Get(), FALSE, FTP_TRANSFER_TYPE_ASCII, Command, 0, &ftpCommand) == 0)
             {
