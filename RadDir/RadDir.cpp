@@ -71,13 +71,18 @@ void DisplayPadding(int Count)
     }
 }
 
-void DisplayTime(const FILETIME& time)
+void DisplayTime(const FILETIME& time, bool ConvertToLocal)
 {
     SYSTEMTIME stUTC, stLocal;
     if (FileTimeToSystemTime(&time, &stUTC) == 0)
         rad::ThrowWinError();
-    if (SystemTimeToTzSpecificLocalTime(NULL, &stUTC, &stLocal) == 0)
-        rad::ThrowWinError();
+    if (ConvertToLocal)
+    {
+        if (SystemTimeToTzSpecificLocalTime(NULL, &stUTC, &stLocal) == 0)
+            rad::ThrowWinError();
+    }
+    else
+        stLocal = stUTC;
 
 
     TCHAR Date[1024];
@@ -192,7 +197,7 @@ void DisplayName(const CDirectory::CEntry& dir_entry)
     SetConsoleTextAttribute(hOut, OriginalAttribute);
 }
 
-void DisplayFileDataLong(const CDirectory::CEntry& dir_entry, NUMBERFMT* nf, bool human)
+void DisplayFileDataLong(const CDirectory::CEntry& dir_entry, NUMBERFMT* nf, bool human, bool ConvertToLocal)
 {
     _tprintf(TEXT("%c%c%c%c%c ")
         , (dir_entry.IsDirectory() ? TEXT('D') : TEXT('-'))
@@ -201,7 +206,7 @@ void DisplayFileDataLong(const CDirectory::CEntry& dir_entry, NUMBERFMT* nf, boo
         , (dir_entry.IsSystem() ? TEXT('S') : TEXT('-'))
         , (dir_entry.IsHidden() ? TEXT('H') : TEXT('-'))
         );
-    DisplayTime(dir_entry.ftLastWriteTime);
+    DisplayTime(dir_entry.ftLastWriteTime, ConvertToLocal);
     if (dir_entry.IsDirectory())
         _tprintf(_T("%14s"), _T(""));
     else
@@ -249,13 +254,13 @@ void DisplayDirListSummary(const std::vector<CDirectory::CEntry>& dirlist, NUMBE
     _tprintf(TEXT(" bytes\n"));
 }
 
-void DisplayDirListLong(const std::vector<CDirectory::CEntry>& dirlist, NUMBERFMT* nf, bool human)
+void DisplayDirListLong(const std::vector<CDirectory::CEntry>& dirlist, NUMBERFMT* nf, bool human, bool ConvertToLocal)
 {
     for (std::vector<CDirectory::CEntry>::const_iterator it = dirlist.begin();
         it != dirlist.end(); ++it)
     {
         if (!it->IsDots())
-            DisplayFileDataLong(*it, nf, human);
+            DisplayFileDataLong(*it, nf, human, ConvertToLocal);
     }
     DisplayDirListSummary(dirlist, nf, human);
 }
@@ -361,7 +366,7 @@ void DoDirectory(const Url& DirPattern, const Config& config, NumberFormat& nf)
         else if (config.DisplayWideFormat)
             DisplayDirListWide(dirlist, &nf, config.Human);
         else
-            DisplayDirListLong(dirlist, &nf, config.Human);
+            DisplayDirListLong(dirlist, &nf, config.Human, DirPattern.IsLocal());
         //_tprintf(TEXT("\n"));
     }
 
