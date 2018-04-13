@@ -13,6 +13,34 @@
 
 //#include "Environment.H"
 
+BOOL GetRealPath(LPCWSTR File, LPWSTR Path, int Len)
+{
+    HANDLE hFile = CreateFile(File,               // file to open
+        GENERIC_READ,          // open for reading
+        FILE_SHARE_READ,       // share for reading
+        NULL,                  // default security
+        OPEN_EXISTING,         // existing file only
+        FILE_FLAG_BACKUP_SEMANTICS | FILE_ATTRIBUTE_NORMAL, // normal file
+        NULL);                 // no attr. template
+
+    if (hFile == INVALID_HANDLE_VALUE)
+        return FALSE;
+
+    DWORD dwRet = GetFinalPathNameByHandle(hFile, Path, Len, VOLUME_NAME_DOS);
+
+    if (dwRet == 0)
+    {
+        CloseHandle(hFile);
+        return EXIT_FAILURE;
+    }
+
+    if (_tcsnccmp(Path, _T("\\\\?\\"), 4) == 0)
+        _tcscpy_s(Path, Len, Path + 4);
+
+    CloseHandle(hFile);
+    return TRUE;
+}
+
 static TCHAR	g_IniFileName[1024];
 
 void InitIniFileName()
@@ -197,7 +225,7 @@ void DisplayName(const CDirectory::CEntry& dir_entry)
     SetConsoleTextAttribute(hOut, OriginalAttribute);
 }
 
-void DisplayFileDataLong(const CDirectory::CEntry& dir_entry, NUMBERFMT* nf, bool human, bool ConvertToLocal)
+void DisplayFileDataLong(const std::tstring& BaseDir, const CDirectory::CEntry& dir_entry, NUMBERFMT* nf, bool human, bool ConvertToLocal)
 {
     _tprintf(TEXT("%c%c%c%c%c ")
         , (dir_entry.IsDirectory() ? TEXT('D') : TEXT('-'))
@@ -213,6 +241,13 @@ void DisplayFileDataLong(const CDirectory::CEntry& dir_entry, NUMBERFMT* nf, boo
         DisplaySize(dir_entry.GetFileSize(), nf, human);
     _tprintf(TEXT(" "));
     DisplayName(dir_entry);
+    if (dir_entry.IsReparsePoint())
+    {
+        Url FullPath(BaseDir + dir_entry.GetFileName());
+        TCHAR RealPath[MAX_PATH];
+        GetRealPath(FullPath.GetUrl(), RealPath, ARRAYSIZE(RealPath));
+        _tprintf(TEXT(" [%s]"), RealPath);
+    }
     _tprintf(TEXT("\n"));
 }
 
@@ -254,13 +289,13 @@ void DisplayDirListSummary(const std::vector<CDirectory::CEntry>& dirlist, NUMBE
     _tprintf(TEXT(" bytes\n"));
 }
 
-void DisplayDirListLong(const std::vector<CDirectory::CEntry>& dirlist, NUMBERFMT* nf, bool human, bool ConvertToLocal)
+void DisplayDirListLong(const std::tstring& BaseDir, const std::vector<CDirectory::CEntry>& dirlist, NUMBERFMT* nf, bool human, bool ConvertToLocal)
 {
     for (std::vector<CDirectory::CEntry>::const_iterator it = dirlist.begin();
         it != dirlist.end(); ++it)
     {
         if (!it->IsDots())
-            DisplayFileDataLong(*it, nf, human, ConvertToLocal);
+            DisplayFileDataLong(BaseDir, *it, nf, human, ConvertToLocal);
     }
     DisplayDirListSummary(dirlist, nf, human);
 }
@@ -356,6 +391,9 @@ void DoDirectory(const Url& DirPattern, const Config& config, NumberFormat& nf)
     if (config.order != DirSorter::None)
         SortDirectory(dirlist, DirSorter(config.order, config.GroupDirectoriesFirst));
 
+    const TCHAR* last = _tcsrchr(DirPattern.GetUrl(), DirPattern.GetDelim());
+    const std::tstring BaseDir = last ? std::tstring(DirPattern.GetUrl(), last + 1) : std::tstring();
+
     if (!config.Recursive || !dirlist.empty())
     {
         if (config.Recursive)
@@ -366,13 +404,12 @@ void DoDirectory(const Url& DirPattern, const Config& config, NumberFormat& nf)
         else if (config.DisplayWideFormat)
             DisplayDirListWide(dirlist, &nf, config.Human);
         else
-            DisplayDirListLong(dirlist, &nf, config.Human, DirPattern.IsLocal());
+            DisplayDirListLong(BaseDir, dirlist, &nf, config.Human, DirPattern.IsLocal());
         //_tprintf(TEXT("\n"));
     }
 
     if (config.Recursive)
     {
-        const TCHAR* last = _tcsrchr(DirPattern.GetUrl(), DirPattern.GetDelim());
         std::tstring Pattern(DirPattern.GetUrl());
         if (last)
             Pattern.assign(last + 1);
@@ -392,17 +429,14 @@ void DoDirectory(const Url& DirPattern, const Config& config, NumberFormat& nf)
         }
         else
         {
-            // TODO Get the direcory again without the pattern
-            std::tstring BaseSubDir;
-            if (last)
-                BaseSubDir.assign(DirPattern.GetUrl(), last + 1);
-            GetDirectory(BaseSubDir.c_str(), dirlist, config.DisplayHiddenFiles);
+            // TODO Get the directory again without the pattern
+            GetDirectory(BaseDir.c_str(), dirlist, config.DisplayHiddenFiles);
             for (std::vector<CDirectory::CEntry>::const_iterator it = dirlist.begin();
                 it != dirlist.end(); ++it)
             {
                 if (it->IsDirectory() && !it->IsDots())
                 {
-                    Url SubDirPattern(BaseSubDir + it->GetFileName());
+                    Url SubDirPattern(BaseDir + it->GetFileName());
                     SubDirPattern.Change(Pattern);
                     DoDirectory(SubDirPattern, config, nf);
                 }
