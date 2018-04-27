@@ -161,7 +161,7 @@ void DisplaySize(ULARGE_INTEGER size, NUMBERFMT* nf, bool human)
     nf->NumDigits = NumDigits;
 }
 
-const TCHAR* GetExtension(const TCHAR *Name)
+const TCHAR* GetExtension(const TCHAR *Name) // TODO Replace with PathFindExtension
 {
     const TCHAR* Ext = Name + _tcslen(Name);
     while(Ext > Name)

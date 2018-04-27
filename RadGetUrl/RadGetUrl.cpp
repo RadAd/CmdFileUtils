@@ -10,6 +10,10 @@
 
 // TODO
 // If output is a directory append name
+// Taskbar progress
+// Set headers, specifically cookies
+// Output to stdout
+// If name is empty set to index.html
 
 enum RetCode
 {
@@ -132,10 +136,11 @@ RetCode HttpDownload(const CWinInetHandle& inet, const TCHAR* InputFile, const T
         if (!Skip)
         {
             CWinFile OFile;
-            OFile.Open(OutputFile, FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL);
+            const DWORD Share = _tcscmp(OutputFile, TEXT("CONOUT$")) == 0 ? FILE_SHARE_WRITE : 0;
+            OFile.Open(OutputFile, GENERIC_WRITE | FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES, Share, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL);
             CopyFile(IFile, OFile, FileSize, nf);
 
-            if (SysFileDateValid)
+            if (SysFileDateValid && OFile.GetType() == FILE_TYPE_DISK)
             {
                 FILETIME FileFileDate = { 0 , 0 };
                 if (SystemTimeToFileTime(&SysFileDate, &FileFileDate) == 0)
@@ -205,7 +210,8 @@ RetCode FtpDownload(const CWinInetHandle& inet, const TCHAR* Host, INTERNET_PORT
         _tprintf(_T("\n"));
 
         CWinFile OFile;
-        OFile.Open(OutputFile, FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL);
+        const DWORD Share = _tcscmp(OutputFile, TEXT("CONOUT$")) == 0 ? FILE_SHARE_WRITE : 0;
+        OFile.Open(OutputFile, GENERIC_WRITE | FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES, Share, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL);
         CopyFile(IFile, OFile, FileSize, nf);
 
         OFile.SetTime(NULL, NULL, &dir_entry.ftLastWriteTime);
@@ -262,9 +268,9 @@ int tmain(int argc, TCHAR *argv[])
 
 #ifdef _DEBUG
         //InputFile = TEXT("http://download.mozilla.org/?product=firefox-1.5.0.6&os=win&lang=en-US");
-        //InputFile = TEXT("ftp://adam:radad1@lion.preston.net/staff/adam/tms_devel");
+        //InputFile = TEXT("ftp://adam:xxx@lion.preston.net/staff/adam/tms_devel");
         //InputFile = TEXT("ftp://ftp.microsoft.com/ResKit/win2000/drivers.zip");
-        //InputFile = TEXT("ftp://adam:radad1@lion.preston.net/staff/adam/a");
+        //InputFile = TEXT("ftp://adam:xxx@lion.preston.net/staff/adam/a");
         //UseHttp = true;
 #endif
         if (!ShowUsage && InputFile)
@@ -295,6 +301,8 @@ int tmain(int argc, TCHAR *argv[])
                 if (UseHttp)
                     r = HttpDownload(inet, InputFile, OutputFile, StatusCode, ShowHeaders, Reload, CheckNewer, &nf);
                 else
+                    // TODO Cant show headers
+                    // TODO Use CheckNewer
                     r = FtpDownload(inet, Host, UrlInput.nPort, User, Password, Path, InputFile, OutputFile, Reload, &nf);
                 break;
 

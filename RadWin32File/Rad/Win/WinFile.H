@@ -54,6 +54,11 @@ public:
         return Size;
     }
 
+    DWORD GetType() const
+    {
+        return GetFileType(m_File.Get());
+    }
+
     void SetTime(const FILETIME* lpCreationTime, const FILETIME* lpLastAccessTime, const FILETIME* lpLastWriteTime)
     {
         if (::SetFileTime(m_File.Get(), lpCreationTime, lpLastAccessTime, lpLastWriteTime) == 0)
