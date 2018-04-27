@@ -111,9 +111,19 @@ inline bool operator>(const FILETIME& a, const FILETIME& b)
     return CompareFileTime(&a, &b) > 0;
 }
 
+inline bool operator>=(const FILETIME& a, const FILETIME& b)
+{
+    return CompareFileTime(&a, &b) >= 0;
+}
+
 inline bool operator<(const FILETIME& a, const FILETIME& b)
 {
     return CompareFileTime(&a, &b) < 0;
+}
+
+inline bool operator<=(const FILETIME& a, const FILETIME& b)
+{
+    return CompareFileTime(&a, &b) <= 0;
 }
 
 inline bool operator==(const FILETIME& a, const FILETIME& b)

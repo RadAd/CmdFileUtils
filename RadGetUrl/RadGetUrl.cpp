@@ -144,7 +144,7 @@ RetCode HttpDownload(const CWinInetHandle& inet, const TCHAR* InputFile, const T
                 if (SystemTimeToFileTime(&SysFileDate, &UrlFileDate) == 0)
                     rad::ThrowWinError(TEXT("SystemTimeToFileTime : "));
 
-                if (FileFileDate > UrlFileDate)
+                if (FileFileDate >= UrlFileDate)
                     Skip = true;
             }
         }
@@ -170,7 +170,7 @@ RetCode HttpDownload(const CWinInetHandle& inet, const TCHAR* InputFile, const T
         }
         else
         {
-            _tprintf(_T("Skipping, file is newer."));
+            _tprintf(_T("Skipping, file is newer.\n"));
             return RET_SKIP_FILE;
         }
     }
