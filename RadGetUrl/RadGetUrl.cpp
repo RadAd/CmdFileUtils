@@ -12,7 +12,6 @@
 // If output is a directory append name
 // Taskbar progress
 // Output to stdout
-// If name is empty set to index.html
 
 enum RetCode
 {
@@ -91,10 +90,15 @@ RetCode HttpDownload(const CWinInetHandle& inet, const TCHAR* InputFile, const T
             _tprintf(_T("Url: %s\n"), Url);
             OutputFile = _tcsrchr(Url, TEXT('/'));
             if (OutputFile)
+            {
                 ++OutputFile;
-            const TCHAR* OutputFileEnd = _tcsrchr(OutputFile, TEXT('?'));
-            if (OutputFileEnd)
-                Url[OutputFileEnd - Url] = '\0';
+                const TCHAR* OutputFileEnd = _tcsrchr(OutputFile, TEXT('?'));
+                if (OutputFileEnd)
+                    Url[OutputFileEnd - Url] = '\0';
+            }
+
+            if (!OutputFile || OutputFile[0] == TEXT('\0'))
+                OutputFile = TEXT("index.html");
         }
     }
 
@@ -327,6 +331,7 @@ int tmain(int argc, TCHAR *argv[])
                 break;
 
             default:
+                _ftprintf(stderr, TEXT("Unknown scheme\n"));
                 r = RET_UNKNOWN_SCHEME;
                 break;
             }
