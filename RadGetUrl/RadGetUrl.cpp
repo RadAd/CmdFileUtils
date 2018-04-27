@@ -11,7 +11,6 @@
 // TODO
 // If output is a directory append name
 // Taskbar progress
-// Set headers, specifically cookies
 // Output to stdout
 // If name is empty set to index.html
 
@@ -32,13 +31,26 @@ bool GetUrl(CWinInetFile& IFile, TCHAR* Url, DWORD dwSize)
         && InternetCanonicalizeUrl(Url, Url, &(Size = 1024), ICU_DECODE | ICU_NO_ENCODE) != FALSE;
 }
 
-RetCode HttpDownload(const CWinInetHandle& inet, const TCHAR* InputFile, const TCHAR* OutputFile, DWORD& StatusCode, bool ShowHeaders, bool Reload, bool CheckNewer, const NUMBERFMT* nf)
+RetCode HttpDownload(const CWinInetHandle& inet, const TCHAR* InputFile, const TCHAR* OutputFile, DWORD& StatusCode, bool ShowHeaders, bool Reload, bool CheckNewer, const TCHAR* Cookie, const NUMBERFMT* nf)
 {
     CWinInetHttpFile IFile;
     DWORD Flags = 0;
     if (Reload)
         Flags |= INTERNET_FLAG_RELOAD;
+#if TRUE
+    TCHAR Header[1024] = TEXT("");
+    if (Cookie && Cookie[0] != TEXT('\0'))
+    {
+        Flags |= INTERNET_FLAG_NO_COOKIES;
+        _tcscat_s(Header, TEXT("Cookie: "));
+        _tcscat_s(Header, Cookie);
+        _tcscat_s(Header, TEXT("\n"));
+    }
+    IFile.Open(inet.Get(), InputFile, Header, (DWORD) -1, Flags, 0);
+#else
+    //InternetSetCookie(InputFile, TEXT("oraclelicense"), TEXT("accept-securebackup-cookie"));
     IFile.Open(inet.Get(), InputFile, NULL, 0, Flags, 0);
+#endif
 
     StatusCode = IFile.GetStatusCode();
 
@@ -229,6 +241,7 @@ int tmain(int argc, TCHAR *argv[])
     {
         const TCHAR* InputFile = 0;
         const TCHAR* OutputFile = 0;
+        TCHAR Cookie[1024] = TEXT("");
         bool UseHttp = false;
         bool ShowHeaders = false;
         bool Reload = false;
@@ -250,6 +263,13 @@ int tmain(int argc, TCHAR *argv[])
                     Reload = true;
                 else if (_tcscmp(argv[i] + 1, TEXT("newer")) == 0)
                     CheckNewer = true;
+                else if (_tcscmp(argv[i] + 1, TEXT("cookie")) == 0)
+                {
+                    ++i;
+                    if (Cookie[0] != TEXT('\0'))
+                        _tcscat_s(Cookie, TEXT("; "));
+                    _tcscat_s(Cookie, argv[i]);
+                }
                 else if (_tcscmp(argv[i] + 1, TEXT("?")) == 0)
                     ShowUsage = true;
                 else
@@ -294,12 +314,12 @@ int tmain(int argc, TCHAR *argv[])
             {
             case INTERNET_SCHEME_HTTP:
             case INTERNET_SCHEME_HTTPS:
-                r = HttpDownload(inet, InputFile, OutputFile, StatusCode, ShowHeaders, Reload, CheckNewer, &nf);
+                r = HttpDownload(inet, InputFile, OutputFile, StatusCode, ShowHeaders, Reload, CheckNewer, Cookie, &nf);
                 break;
 
             case INTERNET_SCHEME_FTP:
                 if (UseHttp)
-                    r = HttpDownload(inet, InputFile, OutputFile, StatusCode, ShowHeaders, Reload, CheckNewer, &nf);
+                    r = HttpDownload(inet, InputFile, OutputFile, StatusCode, ShowHeaders, Reload, CheckNewer, Cookie, &nf);
                 else
                     // TODO Cant show headers
                     // TODO Use CheckNewer
@@ -326,6 +346,7 @@ int tmain(int argc, TCHAR *argv[])
                 { TEXT("headers"),  TEXT("Show headers (http only)") },
                 { TEXT("reload "),  TEXT("Force a reload") },
                 { TEXT("newer  "),  TEXT("Check if newer than local (http only)") },
+                { TEXT("cookie "),  TEXT("Add a cookie to the headers (http only)") },
             };
             for (int i = 0; i < ARRAYSIZE(options); ++i)
             {
