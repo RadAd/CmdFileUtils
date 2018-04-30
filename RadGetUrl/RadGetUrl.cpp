@@ -215,7 +215,11 @@ RetCode FtpDownload(const CWinInetHandle& inet, const TCHAR* Host, INTERNET_PORT
 
         if (!OutputFile)
         {
-            OutputFile = dir_entry.GetFileName();
+            OutputFile = _tcsrchr(dir_entry.GetFileName(), TEXT('/'));
+            if (OutputFile)
+                ++OutputFile;
+            else
+                OutputFile = dir_entry.GetFileName();
         }
 
         CWinInetFile::FileSizeT FileSize = IFile.GetSize();
@@ -307,11 +311,6 @@ int tmain(int argc, TCHAR *argv[])
             if (!inet.Get())
                 ThrowWinInetError();
 
-            TCHAR Host[100];
-            TCHAR User[100];
-            TCHAR Password[100];
-            TCHAR Path[1024];
-
             Url  UrlInput(InputFile);
 
             switch (UrlInput.nScheme)
@@ -327,7 +326,7 @@ int tmain(int argc, TCHAR *argv[])
                 else
                     // TODO Cant show headers
                     // TODO Use CheckNewer
-                    r = FtpDownload(inet, Host, UrlInput.nPort, User, Password, Path, InputFile, OutputFile, Reload, &nf);
+                    r = FtpDownload(inet, UrlInput.GetHost(), UrlInput.nPort, UrlInput.GetUser(), UrlInput.GetPassword(), UrlInput.GetPath(), InputFile, OutputFile, Reload, &nf);
                 break;
 
             default:

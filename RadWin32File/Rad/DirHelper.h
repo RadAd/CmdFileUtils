@@ -45,6 +45,8 @@ public:
     void AppendDelim();
     const TCHAR* GetHost() const { return m_Host; }
     INTERNET_PORT GetPort() const { return nPort; }
+    const TCHAR* GetUser() const { return m_User; }
+    const TCHAR* GetPassword() const { return m_Password; }
     const TCHAR* GetPath() const { return m_Path; }
     const TCHAR* GetScheme() const { return lpszScheme; }
     const TCHAR* GetUrl() const { return m_Url; }
