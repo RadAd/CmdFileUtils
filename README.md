@@ -8,9 +8,10 @@ Command line utilties for file management
 ## RadDir - dir replacement
 This is intended to replace the dir command of cmd.exe.
 
-To use it create a macro `doskey dir=RadDir.exe $*`
+To use it add a macro `doskey dir=RadDir.exe $*` to your startup script.
 
-Improvements include smaller header and colour ouptut.
+Improvements include smaller header and colour output.
+Colours are taken from the file [RadDir.ini](RadDir/RadDir.ini).
 
 ## RadGetUrl - url downloader
 
