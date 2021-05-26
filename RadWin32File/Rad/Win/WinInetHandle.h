@@ -2,6 +2,7 @@
 #define WININETHANDLE_H
 
 #include <Rad/WinError.h>
+#include <Rad/Win/WinHandle.h>
 #include <WinInet.H>
 
 inline void ThrowWinInetError()
@@ -34,41 +35,27 @@ inline void ThrowWinInetError(LPCTSTR msg)
         ThrowWinError(error);
 }
 
-inline void CheckInternetCloseHandle(HANDLE Handle)
+inline BOOL __stdcall CheckInternetCloseHandle(HINTERNET Handle)
 {
     if (Handle != NULL)
     {
         if (!::InternetCloseHandle(Handle))
             ThrowWinInetError();
     }
+    return TRUE;
 }
 
-class CWinInetHandle : private std::unique_ptr<HINTERNET, rad::WinHandleDeleter<HINTERNET, CheckInternetCloseHandle>>
+class CWinInetHandle : public rad::WinHandle<HINTERNET>
 {
 public:
     CWinInetHandle(HINTERNET Handle = NULL)
-        : std::unique_ptr<HINTERNET, rad::WinHandleDeleter<HINTERNET, CheckInternetCloseHandle>>(Handle)
+        : rad::WinHandle<HINTERNET>(Handle, CheckInternetCloseHandle)
     {
-    }
-
-    void Close()
-    {
-        release();
-    }
-
-    HINTERNET Get() const
-    {
-        return get();
     }
 
     void Attach(HINTERNET Handle = NULL)
     {
         operator=(Handle);
-    }
-
-    HINTERNET Release()
-    {
-        return release();
     }
 };
 

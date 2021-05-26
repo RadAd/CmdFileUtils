@@ -42,12 +42,11 @@
     <ProjectGuid>{56BD95CA-495C-4282-8826-F922EA44BD46}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>RadWin32File</RootNamespace>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
@@ -56,7 +55,6 @@
   <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
   </PropertyGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Label="Shared">
@@ -74,11 +72,12 @@
       <SubSystem>Windows</SubSystem>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /S /Y /I "$(ProjectDir)Rad\*.h" "$(SolutionDir)Include\Rad"</Command>
+      <Command>xcopy /S /Y /I /R "$(ProjectDir)Rad\*.h" "$(SolutionDir)Include\Rad"
+attrib +R "$(SolutionDir)Include\Rad\*" /S
+</Command>
       <Message>Copy include files</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>
