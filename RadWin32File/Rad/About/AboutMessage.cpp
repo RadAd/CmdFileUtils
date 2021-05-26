@@ -1,9 +1,13 @@
 #include "AboutMessage.H"
-#include "../ConsoleUtils.h"
 
 #include <Rad/tstring.h>
 #include <stdio.h>
 #include <tchar.h>
+
+#define ESC TEXT("\x1B")
+#define ANSI_COLOR ESC TEXT("[%sm")
+#define ANSI_COLOR_(x) ESC TEXT("[") TEXT(#x) TEXT("m")
+#define ANSI_RESET ESC TEXT("[0m")
 
 void DisplayAboutMessage(HINSTANCE hInstance, const TCHAR *Product)
 {
@@ -36,17 +40,6 @@ void DisplayAboutMessage(HINSTANCE hInstance, const TCHAR *Product)
         _tcscpy_s(FileVersion, TEXT("Unknown"));
     }
 
-    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    WORD OriginalAttribute = GetConsoleTextAttribute(hOut);
-
-    SetConsoleTextAttribute(hOut, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
-    _tprintf(Product);
-    SetConsoleTextAttribute(hOut, OriginalAttribute);
-    TCHAR Version[] = TEXT(" Version ");
-    _tprintf(Version);
-    SetConsoleTextAttribute(hOut, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
-    _tprintf(FileVersion);
-    SetConsoleTextAttribute(hOut, OriginalAttribute);
-    TCHAR By[] = TEXT("\n By Adam Gates (adamgates84+software@gmail.com) - http://radsoft.boxathome.net/\n");
-    _tprintf(By);
+    _tprintf(ANSI_COLOR_(37) TEXT("%s") ANSI_RESET TEXT(" Version") ANSI_COLOR_(37) TEXT(" %s\n") ANSI_RESET, Product, FileVersion);
+    _tprintf(TEXT(" By Adam Gates (adamgates84+software@gmail.com) - http://radsoft.boxathome.net/\n"));
 }

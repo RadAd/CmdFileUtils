@@ -3,18 +3,18 @@
 #include <Rad/WinError.H>
 #include <Rad/Win/WinFile.H>
 #include <Rad/About/AboutMessage.h>
-#include <Rad/ConsoleUtils.h>
 #include <Rad/DirHelper.h>
 #include <Rad/NumberFormat.h>
+
+#define ESC TEXT("\x1B")
+#define ANSI_COLOR ESC TEXT("[%sm")
+#define ANSI_COLOR_(x) ESC TEXT("[") TEXT(#x) TEXT("m")
+#define ANSI_RESET ESC TEXT("[0m")
 
 void DisplayWelcomeMessage()
 {
     const HMODULE	Module = GetModuleHandle(NULL);
     DisplayAboutMessage(Module, TEXT("RadSync"));
-
-    const HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    const WORD OriginalAttribute = GetConsoleTextAttribute(hOut);
-    const WORD HiliteAttribute = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY;
 
     _tprintf(_T("\nOne way sync between two directories.\n\nRadSync <options> [src] [dst]\n\nOptions:\n"));
     TCHAR* options[][2] = {
@@ -23,17 +23,8 @@ void DisplayWelcomeMessage()
         { TEXT("d"),  TEXT("Delete - delete files in destination") },
     };
     for (int i = 0; i < ARRAYSIZE(options); ++i)
-    {
-        SetConsoleTextAttribute(hOut, HiliteAttribute);
-        _tprintf(_T("    /%s"), options[i][0]);
-        SetConsoleTextAttribute(hOut, OriginalAttribute);
-        _tprintf(_T("  %s\n"), options[i][1]);
-    }
-    _tprintf(TEXT(" use "));
-    SetConsoleTextAttribute(hOut, HiliteAttribute);
-    _tprintf(TEXT("-"));
-    SetConsoleTextAttribute(hOut, OriginalAttribute);
-    _tprintf(TEXT(" to negate an option\n"));
+        _tprintf(_T("    ") ANSI_COLOR_(37) _T("/%s") ANSI_RESET _T("  %s\n"), options[i][0], options[i][1]);
+    _tprintf(TEXT(" use ") ANSI_COLOR_(37) _T("-") ANSI_RESET _T(" to negate an option\n"));
 }
 
 struct Options
@@ -89,7 +80,7 @@ void SyncDeleteFileDir(const CDirectory::CEntry& source_entry, const Url& destin
             subdirdest.AppendDelim();
             GetDirectory(subdirdest, dirlist, true);
 
-            DirSorter dir_sorter(DirSorter::Name, true);
+            DirSorter dir_sorter(DirSorter::Order::Name, true);
             SortDirectory(dirlist, dir_sorter);
 
             for (std::vector<CDirectory::CEntry>::const_iterator dirlist_it = dirlist.begin(); dirlist_it != dirlist.end(); ++dirlist_it)
@@ -231,7 +222,7 @@ void SyncDirectories(Url dirA, Url dirB, const Options& options)
     GetDirectory(dirA, dirlistA, true);
     GetDirectory(dirB, dirlistB, true);
 
-    DirSorter dir_sorter(DirSorter::Name, true);
+    DirSorter dir_sorter(DirSorter::Order::Name, true);
     SortDirectory(dirlistA, dir_sorter);
     SortDirectory(dirlistB, dir_sorter);
 

@@ -88,7 +88,7 @@ void GetDirectory(const Url& url, std::vector<CDirectory::CEntry>& dirlist, bool
 class DirSorter
 {
 public:
-    enum Order { None, Name, Size, Date };
+    enum class Order { None, Name, Size, Date };
 
     DirSorter(Order order, bool DirFirst)
         : m_Order(order), m_DirFirst(DirFirst)

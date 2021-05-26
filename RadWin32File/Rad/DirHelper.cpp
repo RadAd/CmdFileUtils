@@ -275,7 +275,7 @@ void CopyFile(CWinInetFile& IFile, CWinFile& OFile, CWinInetFile::FileSizeT File
 
         dp.Draw(TotalRead, FileSize);
     }
-    delete Buffer;
+    delete [] Buffer;
 }
 
 void CopyFile(const Url& source, const Url& destination, const CDirectory::CEntry& entry, const NUMBERFMT* nf)
@@ -840,15 +840,15 @@ bool DirSorter::Compare(const CDirectory::CEntry& left, const CDirectory::CEntry
     switch(m_Order)
     {
     default:
-    case Name:
+    case Order::Name:
         return CompareName(left, right);
         break;
 
-    case Size:
+    case Order::Size:
         return CompareSize(left, right);
         break;
 
-    case Date:
+    case Order::Date:
         return CompareDate(left, right);
         break;
     }

@@ -2,7 +2,6 @@
 
 #include <Rad/Win/WinFile.h>
 #include <Rad/Win/WinInetFile.h>
-#include <Rad/ConsoleUtils.H>
 #include <Rad/Directory.H>
 #include <Rad/DirHelper.H>
 #include <Rad/NumberFormat.h>
@@ -13,14 +12,19 @@
 // Taskbar progress
 // Output to stdout
 
-enum RetCode
+#define ESC TEXT("\x1B")
+#define ANSI_COLOR ESC TEXT("[%sm")
+#define ANSI_COLOR_(x) ESC TEXT("[") TEXT(#x) TEXT("m")
+#define ANSI_RESET ESC TEXT("[0m")
+
+enum class RetCode
 {
-    RET_OK,
-    RET_WINDOWS_EXCEPTION,
-    RET_UNKNOWN_EXCEPTION,
-    RET_UNKNOWN_SCHEME,
-    RET_BAD_REQUEST,
-    RET_SKIP_FILE,
+    OK,
+    WINDOWS_EXCEPTION,
+    UNKNOWN_EXCEPTION,
+    UNKNOWN_SCHEME,
+    BAD_REQUEST,
+    SKIP_FILE,
 };
 
 bool GetUrl(CWinInetFile& IFile, TCHAR* Url, DWORD dwSize)
@@ -166,16 +170,16 @@ RetCode HttpDownload(const CWinInetHandle& inet, const TCHAR* InputFile, const T
                 OFile.SetTime(NULL, NULL, &FileFileDate);
             }
 
-            return RET_OK;
+            return RetCode::OK;
         }
         else
         {
             _tprintf(_T("Skipping, file is newer.\n"));
-            return RET_SKIP_FILE;
+            return RetCode::SKIP_FILE;
         }
     }
     else
-        return RET_BAD_REQUEST;
+        return RetCode::BAD_REQUEST;
 }
 
 RetCode FtpDownload(const CWinInetHandle& inet, const TCHAR* Host, INTERNET_PORT nPort, const TCHAR* User, const TCHAR* Password, const TCHAR* Path, const TCHAR* InputFile, const TCHAR* OutputFile, bool Reload, const NUMBERFMT* nf)
@@ -237,12 +241,12 @@ RetCode FtpDownload(const CWinInetHandle& inet, const TCHAR* Host, INTERNET_PORT
         OFile.SetTime(NULL, NULL, &dir_entry.ftLastWriteTime);
     }
 
-    return RET_OK;
+    return RetCode::OK;
 }
 
 int tmain(int argc, TCHAR *argv[])
 {
-    RetCode r = RET_OK;
+    RetCode r = RetCode::OK;
     DWORD StatusCode = HTTP_STATUS_OK;
 
     try
@@ -331,7 +335,7 @@ int tmain(int argc, TCHAR *argv[])
 
             default:
                 _ftprintf(stderr, TEXT("Unknown scheme\n"));
-                r = RET_UNKNOWN_SCHEME;
+                r = RetCode::UNKNOWN_SCHEME;
                 break;
             }
         }
@@ -339,10 +343,6 @@ int tmain(int argc, TCHAR *argv[])
         {
             HMODULE    Module = GetModuleHandle(NULL);
             DisplayAboutMessage(Module, TEXT("RadGetUrl"));
-
-            const HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-            const WORD OriginalAttribute = GetConsoleTextAttribute(hOut);
-            const WORD HiliteAttribute = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY;
 
             _tprintf(TEXT("\nDownload a file from a url.\n\nRadGetUrl <options> [InputFile] <OutputFile>\n\nOptions:\n"));
             TCHAR* options[][2] = {
@@ -353,28 +353,22 @@ int tmain(int argc, TCHAR *argv[])
                 { TEXT("cookie "),  TEXT("Add a cookie to the headers (http only)") },
             };
             for (int i = 0; i < ARRAYSIZE(options); ++i)
-            {
-                SetConsoleTextAttribute(hOut, HiliteAttribute);
-                _tprintf(_T("    -%s"), options[i][0]);
-                SetConsoleTextAttribute(hOut, OriginalAttribute);
-                _tprintf(_T("  %s\n"), options[i][1]);
-            }
-            SetConsoleTextAttribute(hOut, OriginalAttribute);
+                _tprintf(_T("    ") ANSI_COLOR_(37) _T("/%s") ANSI_RESET _T("  %s\n"), options[i][0], options[i][1]);
         }
     }
     catch(const rad::WinError &e)
     {
         _ftprintf(stderr, e.GetString().c_str());
-        return RET_WINDOWS_EXCEPTION;
+        return static_cast<int>(RetCode::WINDOWS_EXCEPTION);
     }
     catch(...)
     {
         _ftprintf(stderr, TEXT("Unknown Exception\n"));
-        return RET_UNKNOWN_EXCEPTION;
+        return static_cast<int>(RetCode::UNKNOWN_EXCEPTION);
     }
 
     if (StatusCode != HTTP_STATUS_OK)
         return StatusCode;
     else
-        return r;
+        return static_cast<int>(r);
 }

@@ -23,7 +23,6 @@
     </ClInclude>
     <ClInclude Include="Rad\Directory.h" />
     <ClInclude Include="Rad\DirHelper.h" />
-    <ClInclude Include="Rad\ConsoleUtils.h" />
     <ClInclude Include="Rad\NumberFormat.h" />
   </ItemGroup>
   <ItemGroup>

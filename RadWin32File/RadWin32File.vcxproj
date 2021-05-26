@@ -20,7 +20,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Rad\About\AboutMessage.h" />
-    <ClInclude Include="Rad\ConsoleUtils.h" />
     <ClInclude Include="Rad\Directory.h" />
     <ClInclude Include="Rad\DirHelper.h" />
     <ClInclude Include="Rad\NumberFormat.h" />

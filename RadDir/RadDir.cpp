@@ -8,14 +8,15 @@
 #include <Rad/WinError.H>
 //#include <Rad/Win/Reg.h>
 #include <Rad/About/AboutMessage.h>
-#include <Rad/ConsoleUtils.h>
 #include <Rad/DirHelper.h>
 #include <Rad/NumberFormat.h>
 
 //#include "Environment.H"
 
 #define ESC TEXT("\x1B")
-#define ESC2 TEXT("\\e")
+#define ANSI_COLOR ESC TEXT("[%sm")
+#define ANSI_COLOR_(x) ESC TEXT("[") TEXT(#x) TEXT("m")
+#define ANSI_RESET ESC TEXT("[0m")
 
 BOOL GetRealPath(LPCWSTR File, LPWSTR Path, int Len)
 {
@@ -56,10 +57,6 @@ void DisplayWelcomeMessage()
     HMODULE	Module = GetModuleHandle(NULL);
     DisplayAboutMessage(Module, TEXT("RadDir"));
 
-    const HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    const WORD OriginalAttribute = GetConsoleTextAttribute(hOut);
-    const WORD HiliteAttribute = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY;
-
     _tprintf(TEXT("\nDisplays a list of files and subdirectories in a directory.\n\nRadDir <options> <directory>\n\nOptions:\n"));
     TCHAR* options[][2] = {
         { TEXT("?"), TEXT("Display Usage") },
@@ -72,17 +69,8 @@ void DisplayWelcomeMessage()
         { TEXT("g"), TEXT("Use Human Readable Sizes") },
     };
     for (int i = 0; i < ARRAYSIZE(options); ++i)
-    {
-        SetConsoleTextAttribute(hOut, HiliteAttribute);
-        _tprintf(_T("    /%s"), options[i][0]);
-        SetConsoleTextAttribute(hOut, OriginalAttribute);
-        _tprintf(_T("  %s\n"), options[i][1]);
-    }
-    _tprintf(TEXT(" use "));
-    SetConsoleTextAttribute(hOut, HiliteAttribute);
-    _tprintf(TEXT("-"));
-    SetConsoleTextAttribute(hOut, OriginalAttribute);
-    _tprintf(TEXT(" to negate an option\n"));
+        _tprintf(_T("    ") ANSI_COLOR_(37) _T("/%s") ANSI_RESET _T("  %s\n"), options[i][0], options[i][1]);
+    _tprintf(TEXT(" use ") ANSI_COLOR_(37) _T("-") ANSI_RESET _T(" to negate an option\n"));
 }
 
 void DisplayPadding(int Count)
@@ -181,49 +169,12 @@ const TCHAR* GetExtension(const TCHAR *Name) // TODO Replace with PathFindExtens
 
 void DisplayName(const std::tstring& BaseDir, const CDirectory::CEntry& dir_entry)
 {
-    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    WORD OriginalAttribute = GetConsoleTextAttribute(hOut);
-    WORD Attribute = OriginalAttribute;
     TCHAR strValue[1024];
-    {
-        DWORD Value = 0;
-        const TCHAR *KeyName = 0;
-        if (dir_entry.IsDirectory())
-        {
-            KeyName = TEXT("Directory");
-        }
-        else
-        {
-            KeyName = GetExtension(dir_entry.GetFileName());
-        }
-
-#if 0
-        HKEY Key;
-        DWORD Type = 0;
-        DWORD Length = sizeof(Value);
-        LONG Error;
-        Error = RegOpenKey(HKEY_CLASSES_ROOT, KeyName, &Key);
-        Error = RegQueryValueEx(Key, TEXT("Colour"), 0, &Type, (LPBYTE) &Value, &Length);
-        RegCloseKey(Key);
-#else
-        Value = GetPrivateProfileInt(TEXT("Colour"), KeyName, Value, g_IniFileName);
-        GetPrivateProfileString(TEXT("Colour2"), KeyName, TEXT(""), strValue, ARRAYSIZE(strValue), g_IniFileName);
-#endif
-
-        if (Value > 0)
-        {
-            if (Value <= 0xFF)
-                Attribute &= 0xFF00;
-            else
-                Attribute = 0;
-            Attribute |= Value;
-        }
-    }
+    const TCHAR *KeyName = dir_entry.IsDirectory() ? TEXT("Directory") : GetExtension(dir_entry.GetFileName());
+    GetPrivateProfileString(TEXT("Colour"), KeyName, TEXT(""), strValue, ARRAYSIZE(strValue), g_IniFileName);
 
     if (strValue[0] != TEXT('\0'))
-        _tprintf(ESC TEXT("[%sm"), strValue);
-    else
-        SetConsoleTextAttribute(hOut, Attribute);
+        _tprintf(ANSI_COLOR, strValue);
 
     if (!BaseDir.empty())
         _tprintf(ESC TEXT("]8;;file://%s%s") ESC TEXT("\\"), BaseDir.c_str(), dir_entry.GetFileName());
@@ -234,9 +185,7 @@ void DisplayName(const std::tstring& BaseDir, const CDirectory::CEntry& dir_entr
         _tprintf(ESC TEXT("]8;;") ESC TEXT("\\"));
 
     if (strValue[0] != TEXT('\0'))
-        _tprintf(ESC TEXT("[0m"));
-    else
-        SetConsoleTextAttribute(hOut, OriginalAttribute);
+        _tprintf(ANSI_RESET);
 }
 
 void DisplayFileDataLong(const std::tstring& BaseDir, const CDirectory::CEntry& dir_entry, NUMBERFMT* nf, bool human, bool ConvertToLocal)
@@ -326,10 +275,33 @@ int GetFileNameLenWide(const CDirectory::CEntry& dir_entry)
     return Length;
 }
 
+int GetConsoleWidth()
+{
+    _cputts(ESC TEXT("7"));            // Save cursor position
+    _cputts(ESC TEXT("[999;999H"));    // Move cursor
+    _cputts(ESC TEXT("[6n"));          // Get cursor position
+
+    TCHAR buf[100] = TEXT("");
+    TCHAR* w = nullptr;
+    {
+        TCHAR* p = buf;
+        do
+        {
+            *p = _gettch();
+            if (*p == TEXT(';'))
+                w = p;
+            ++p;
+        } while (p[-1] != TEXT('R'));
+        *p = TEXT('\0');
+    }
+
+    _cputts(ESC TEXT("8"));            // Restore cursor position
+    return w == nullptr ? 100 : _tstoi(w + 1);
+}
+
 void DisplayDirListWide(const std::tstring& BaseDir, const std::vector<CDirectory::CEntry>& dirlist, NUMBERFMT* nf, bool human)
 {
-    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    int ScreenWidth = GetConsoleWidth(hOut);
+    const int ScreenWidth = GetConsoleWidth();
     int Width = 12;
     for (std::vector<CDirectory::CEntry>::const_iterator it = dirlist.begin();
         it != dirlist.end(); ++it)
@@ -414,7 +386,7 @@ void DoDirectory(const Url& DirPattern, const Config& config, NumberFormat& nf)
 
     GetDirectory(DirPattern, dirlist, config.DisplayHiddenFiles);
 
-    if (config.order != DirSorter::None)
+    if (config.order != DirSorter::Order::None)
         SortDirectory(dirlist, DirSorter(config.order, config.GroupDirectoriesFirst));
 
     if (!config.Recursive || !dirlist.empty())
@@ -489,7 +461,7 @@ int tmain(int argc, TCHAR* argv[])
         Config config;
         config.UseThousandSep = true;
         config.GroupDirectoriesFirst = true;
-        config.order = DirSorter::Name;
+        config.order = DirSorter::Order::Name;
         config.DisplayWideFormat = true;
         config.DisplayBareFormat = false;
         config.DisplayHiddenFiles = false;
@@ -536,17 +508,17 @@ int tmain(int argc, TCHAR* argv[])
                     {
                     case TEXT('N'):
                     case TEXT('n'):
-                        config.order = DirSorter::Name;
+                        config.order = DirSorter::Order::Name;
                         break;
 
                     case TEXT('S'):
                     case TEXT('s'):
-                        config.order = DirSorter::Size;
+                        config.order = DirSorter::Order::Size;
                         break;
 
                     case TEXT('D'):
                     case TEXT('d'):
-                        config.order = DirSorter::Date;
+                        config.order = DirSorter::Order::Date;
                         break;
                     }
                 }

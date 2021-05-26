@@ -63,7 +63,7 @@ class CWinInetHttpFile : public CWinInetFile
 public:
     bool GetSize(FileSizeT* oFileSize) const
     {
-        DWORD FileSize;
+        DWORD FileSize = 0;
         DWORD Size = sizeof(FileSize);
         DWORD Index = 0;
         bool result = HttpQueryInfo(Get(), HTTP_QUERY_FLAG_NUMBER | HTTP_QUERY_CONTENT_LENGTH, &FileSize, &Size, &Index) != FALSE;
