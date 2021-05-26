@@ -3,6 +3,7 @@
 
 #include <windows.h>
 #include <tchar.h>
+#include <fileapi.h>
 
 #include <Rad/WinError.H>
 //#include <Rad/Win/Reg.h>
@@ -13,9 +14,12 @@
 
 //#include "Environment.H"
 
+#define ESC TEXT("\x1B")
+#define ESC2 TEXT("\\e")
+
 BOOL GetRealPath(LPCWSTR File, LPWSTR Path, int Len)
 {
-    HANDLE hFile = CreateFile(File,               // file to open
+    rad::WinHandle<> hFile = CreateFile(File,               // file to open
         GENERIC_READ,          // open for reading
         FILE_SHARE_READ,       // share for reading
         NULL,                  // default security
@@ -23,21 +27,17 @@ BOOL GetRealPath(LPCWSTR File, LPWSTR Path, int Len)
         FILE_FLAG_BACKUP_SEMANTICS | FILE_ATTRIBUTE_NORMAL, // normal file
         NULL);                 // no attr. template
 
-    if (hFile == INVALID_HANDLE_VALUE)
+    if (!hFile)
         return FALSE;
 
-    DWORD dwRet = GetFinalPathNameByHandle(hFile, Path, Len, VOLUME_NAME_DOS);
+    DWORD dwRet = GetFinalPathNameByHandle(hFile.Get(), Path, Len, VOLUME_NAME_DOS);
 
     if (dwRet == 0)
-    {
-        CloseHandle(hFile);
         return EXIT_FAILURE;
-    }
 
     if (_tcsnccmp(Path, _T("\\\\?\\"), 4) == 0)
         _tcscpy_s(Path, Len, Path + 4);
 
-    CloseHandle(hFile);
     return TRUE;
 }
 
@@ -179,11 +179,12 @@ const TCHAR* GetExtension(const TCHAR *Name) // TODO Replace with PathFindExtens
     return TEXT("");
 }
 
-void DisplayName(const CDirectory::CEntry& dir_entry)
+void DisplayName(const std::tstring& BaseDir, const CDirectory::CEntry& dir_entry)
 {
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     WORD OriginalAttribute = GetConsoleTextAttribute(hOut);
     WORD Attribute = OriginalAttribute;
+    TCHAR strValue[1024];
     {
         DWORD Value = 0;
         const TCHAR *KeyName = 0;
@@ -206,6 +207,7 @@ void DisplayName(const CDirectory::CEntry& dir_entry)
         RegCloseKey(Key);
 #else
         Value = GetPrivateProfileInt(TEXT("Colour"), KeyName, Value, g_IniFileName);
+        GetPrivateProfileString(TEXT("Colour2"), KeyName, TEXT(""), strValue, ARRAYSIZE(strValue), g_IniFileName);
 #endif
 
         if (Value > 0)
@@ -218,11 +220,23 @@ void DisplayName(const CDirectory::CEntry& dir_entry)
         }
     }
 
-    SetConsoleTextAttribute(hOut, Attribute);
+    if (strValue[0] != TEXT('\0'))
+        _tprintf(ESC TEXT("[%sm"), strValue);
+    else
+        SetConsoleTextAttribute(hOut, Attribute);
+
+    if (!BaseDir.empty())
+        _tprintf(ESC TEXT("]8;;file://%s%s") ESC TEXT("\\"), BaseDir.c_str(), dir_entry.GetFileName());
 
     _tprintf(dir_entry.GetFileName());
 
-    SetConsoleTextAttribute(hOut, OriginalAttribute);
+    if (!BaseDir.empty())
+        _tprintf(ESC TEXT("]8;;") ESC TEXT("\\"));
+
+    if (strValue[0] != TEXT('\0'))
+        _tprintf(ESC TEXT("[0m"));
+    else
+        SetConsoleTextAttribute(hOut, OriginalAttribute);
 }
 
 void DisplayFileDataLong(const std::tstring& BaseDir, const CDirectory::CEntry& dir_entry, NUMBERFMT* nf, bool human, bool ConvertToLocal)
@@ -240,7 +254,7 @@ void DisplayFileDataLong(const std::tstring& BaseDir, const CDirectory::CEntry& 
     else
         DisplaySize(dir_entry.GetFileSize(), nf, human);
     _tprintf(TEXT(" "));
-    DisplayName(dir_entry);
+    DisplayName(BaseDir, dir_entry);
     if (dir_entry.IsReparsePoint())
     {
         Url FullPath(BaseDir + dir_entry.GetFileName());
@@ -251,11 +265,11 @@ void DisplayFileDataLong(const std::tstring& BaseDir, const CDirectory::CEntry& 
     _tprintf(TEXT("\n"));
 }
 
-void DisplayFileDataWide(const CDirectory::CEntry& dir_entry)
+void DisplayFileDataWide(const std::tstring& BaseDir, const CDirectory::CEntry& dir_entry)
 {
     if (dir_entry.IsDirectory())
         _tprintf(TEXT("["));
-    DisplayName(dir_entry);
+    DisplayName(BaseDir, dir_entry);
     if (dir_entry.IsHidden())
         _tprintf(TEXT("^"));
     if (dir_entry.IsReparsePoint())
@@ -266,7 +280,7 @@ void DisplayFileDataWide(const CDirectory::CEntry& dir_entry)
 
 void DisplayFileDataBare(const CDirectory::CEntry& dir_entry)
 {
-    DisplayName(dir_entry);
+    DisplayName(TEXT(""), dir_entry);
     _tprintf(TEXT("\n"));
 }
 
@@ -312,7 +326,7 @@ int GetFileNameLenWide(const CDirectory::CEntry& dir_entry)
     return Length;
 }
 
-void DisplayDirListWide(const std::vector<CDirectory::CEntry>& dirlist, NUMBERFMT* nf, bool human)
+void DisplayDirListWide(const std::tstring& BaseDir, const std::vector<CDirectory::CEntry>& dirlist, NUMBERFMT* nf, bool human)
 {
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     int ScreenWidth = GetConsoleWidth(hOut);
@@ -335,7 +349,7 @@ void DisplayDirListWide(const std::vector<CDirectory::CEntry>& dirlist, NUMBERFM
     {
         if (!it->IsDots())
         {
-            DisplayFileDataWide(*it);
+            DisplayFileDataWide(BaseDir, *it);
             ++Column;
             if (Column >= NoColumns)
             {
@@ -373,46 +387,59 @@ struct Config
     bool Human;
 };
 
+std::tstring GetFullPathName(const TCHAR* lpFileName, std::tstring& Pattern)
+{
+    TCHAR path[MAX_PATH];
+    TCHAR* lpFilePart = nullptr;
+    GetFullPathName(
+        lpFileName[0] != TEXT('\0') ? lpFileName : TEXT(".\\"),
+        ARRAYSIZE(path),
+        path,
+        &lpFilePart
+    );
+    if (lpFilePart != nullptr)
+    {
+        Pattern = lpFilePart;
+        *lpFilePart = TEXT('\0');
+    }
+    else
+        Pattern.clear();
+    return path;
+}
+
 void DoDirectory(const Url& DirPattern, const Config& config, NumberFormat& nf)
 {
     std::vector<CDirectory::CEntry> dirlist;
     dirlist.reserve(1000);
 
-    try
-    {
-        GetDirectory(DirPattern, dirlist, config.DisplayHiddenFiles);
-    }
-    catch (const rad::WinError&)
-    {
-        if (!config.Recursive)
-            throw;
-    }
+    GetDirectory(DirPattern, dirlist, config.DisplayHiddenFiles);
 
     if (config.order != DirSorter::None)
         SortDirectory(dirlist, DirSorter(config.order, config.GroupDirectoriesFirst));
-
-    const TCHAR* last = _tcsrchr(DirPattern.GetUrl(), DirPattern.GetDelim());
-    const std::tstring BaseDir = last ? std::tstring(DirPattern.GetUrl(), last + 1) : std::tstring();
 
     if (!config.Recursive || !dirlist.empty())
     {
         if (config.Recursive)
             _tprintf(TEXT("Directory: %s\n"), DirPattern.GetUrl());
 
+        std::tstring FullPattern;
+        const std::tstring FullBaseDir = GetFullPathName(DirPattern.GetUrl(), FullPattern);
+
         if (config.DisplayBareFormat)
             DisplayDirListBare(dirlist);
         else if (config.DisplayWideFormat)
-            DisplayDirListWide(dirlist, &nf, config.Human);
+            DisplayDirListWide(FullBaseDir, dirlist, &nf, config.Human);
         else
-            DisplayDirListLong(BaseDir, dirlist, &nf, config.Human, DirPattern.IsLocal());
+            DisplayDirListLong(FullBaseDir, dirlist, &nf, config.Human, DirPattern.IsLocal());
         //_tprintf(TEXT("\n"));
     }
 
     if (config.Recursive)
     {
-        std::tstring Pattern(DirPattern.GetUrl());
-        if (last)
-            Pattern.assign(last + 1);
+        const TCHAR* last = _tcsrchr(DirPattern.GetUrl(), DirPattern.GetDelim());
+
+        const std::tstring Pattern(last ? last + 1 : DirPattern.GetUrl());
+
         // This is is really try to decide if we already have the subdirectories
         if (Pattern.empty() || Pattern == TEXT("*") || (Pattern.find(TEXT('*')) == std::tstring::npos && Pattern.find(TEXT('?')) == std::tstring::npos))
         {
@@ -429,6 +456,8 @@ void DoDirectory(const Url& DirPattern, const Config& config, NumberFormat& nf)
         }
         else
         {
+            const std::tstring BaseDir = last ? std::tstring(DirPattern.GetUrl(), last + 1) : std::tstring();
+
             // TODO Get the directory again without the pattern
             GetDirectory(BaseDir.c_str(), dirlist, config.DisplayHiddenFiles);
             for (std::vector<CDirectory::CEntry>::const_iterator it = dirlist.begin();

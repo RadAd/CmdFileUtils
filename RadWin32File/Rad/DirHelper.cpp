@@ -817,7 +817,7 @@ void GetDirectory(const Url& url, std::vector<CDirectory::CEntry>& dirlist, bool
         else
         {
             rad::WinError error(TEXT("Error opening directory ") + std::tstring(url.GetUrl()) + TEXT(" : "));
-            //if (error.GetError() != ERROR_FILE_NOT_FOUND)
+            if (error.GetError() != ERROR_FILE_NOT_FOUND)
                 ThrowWinError(error);
         }
     }
