@@ -218,6 +218,7 @@ void DisplayFileDataWide(const std::tstring& BaseDir, const CDirectory::CEntry& 
 {
     if (dir_entry.IsDirectory())
         _tprintf(TEXT("["));
+        //printf(u8"\U0001f4c1");
     DisplayName(BaseDir, dir_entry);
     if (dir_entry.IsHidden())
         _tprintf(TEXT("^"));
