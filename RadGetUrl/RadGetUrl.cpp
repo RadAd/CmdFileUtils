@@ -42,15 +42,15 @@ RetCode HttpDownload(const CWinInetHandle& inet, const TCHAR* InputFile, const T
     if (Reload)
         Flags |= INTERNET_FLAG_RELOAD;
 #if TRUE
-    TCHAR Header[1024] = TEXT("");
+    std::tstring Header;
     if (Cookie && Cookie[0] != TEXT('\0'))
     {
         Flags |= INTERNET_FLAG_NO_COOKIES;
-        _tcscat_s(Header, TEXT("Cookie: "));
-        _tcscat_s(Header, Cookie);
-        _tcscat_s(Header, TEXT("\n"));
+        Header += TEXT("Cookie: ");
+        Header += Cookie;
+        Header += TEXT("\n");
     }
-    IFile.Open(inet.Get(), InputFile, Header, (DWORD) -1, Flags, 0);
+    IFile.Open(inet.Get(), InputFile, Header.c_str(), (DWORD) -1, Flags, 0);
 #else
     //InternetSetCookie(InputFile, TEXT("oraclelicense"), TEXT("accept-securebackup-cookie"));
     IFile.Open(inet.Get(), InputFile, NULL, 0, Flags, 0);
@@ -64,46 +64,50 @@ RetCode HttpDownload(const CWinInetHandle& inet, const TCHAR* InputFile, const T
     if (!IFile.GetSize(&FileSize))
         FileSize.QuadPart = INT64_MAX;
 
-    TCHAR ContentDisposition[1024] = TEXT("");
     {
-        if (!OutputFile && IFile.GetContentDisposition(ContentDisposition, 1024))
+        TCHAR ContentDisposition[1024] = TEXT("");
         {
-            _tprintf(_T("ContentDisposition: %s\n"), ContentDisposition);
-            OutputFile = _tcsstr(ContentDisposition, TEXT("filename="));
-            if (OutputFile)
+            if (!OutputFile && IFile.GetContentDisposition(ContentDisposition, 1024))
             {
+                _tprintf(_T("ContentDisposition: %s\n"), ContentDisposition);
+                OutputFile = _tcsstr(ContentDisposition, TEXT("filename="));
                 if (OutputFile)
-                    OutputFile += _tcslen(TEXT("filename="));
-                const TCHAR* OutputFileEnd = nullptr;
-                if (*OutputFile == '"')
                 {
-                    ++OutputFile;
-                    OutputFileEnd = _tcschr(OutputFile, TEXT('"'));
+                    if (OutputFile)
+                        OutputFile += _tcslen(TEXT("filename="));
+                    const TCHAR* OutputFileEnd = nullptr;
+                    if (*OutputFile == '"')
+                    {
+                        ++OutputFile;
+                        OutputFileEnd = _tcschr(OutputFile, TEXT('"'));
+                    }
+                    else
+                        OutputFileEnd = _tcschr(OutputFile, TEXT(' '));
+                    if (OutputFileEnd)
+                        ContentDisposition[OutputFileEnd - ContentDisposition] = '\0';
                 }
-                else
-                    OutputFileEnd = _tcschr(OutputFile, TEXT(' '));
-                if (OutputFileEnd)
-                    ContentDisposition[OutputFileEnd - ContentDisposition] = '\0';
             }
         }
     }
 
-    TCHAR Url[1024] = TEXT("");
     {
-        if (!OutputFile && GetUrl(IFile, Url, 1024))
+        TCHAR Url[1024] = TEXT("");
         {
-            _tprintf(_T("Url: %s\n"), Url);
-            OutputFile = _tcsrchr(Url, TEXT('/'));
-            if (OutputFile)
+            if (!OutputFile && GetUrl(IFile, Url, 1024))
             {
-                ++OutputFile;
-                const TCHAR* OutputFileEnd = _tcsrchr(OutputFile, TEXT('?'));
-                if (OutputFileEnd)
-                    Url[OutputFileEnd - Url] = '\0';
-            }
+                _tprintf(_T("Url: %s\n"), Url);
+                OutputFile = _tcsrchr(Url, TEXT('/'));
+                if (OutputFile)
+                {
+                    ++OutputFile;
+                    const TCHAR* OutputFileEnd = _tcsrchr(OutputFile, TEXT('?'));
+                    if (OutputFileEnd)
+                        Url[OutputFileEnd - Url] = '\0';
+                }
 
-            if (!OutputFile || OutputFile[0] == TEXT('\0'))
-                OutputFile = TEXT("index.html");
+                if (!OutputFile || OutputFile[0] == TEXT('\0'))
+                    OutputFile = TEXT("index.html");
+            }
         }
     }
 
