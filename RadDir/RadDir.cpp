@@ -4,6 +4,7 @@
 #include <windows.h>
 #include <tchar.h>
 #include <fileapi.h>
+#include <io.h>
 
 #include <Rad/WinError.H>
 //#include <Rad/Win/Reg.h>
@@ -52,7 +53,7 @@ void InitIniFileName()
     _tcscpy_s(s, ARRAYSIZE(g_IniFileName) - (s - g_IniFileName), TEXT(".ini"));
 }
 
-void DisplayWelcomeMessage()
+void DisplayWelcomeMessage(bool Ansi)
 {
     HMODULE	Module = GetModuleHandle(NULL);
     DisplayAboutMessage(Module, TEXT("RadDir"));
@@ -68,9 +69,18 @@ void DisplayWelcomeMessage()
         { TEXT("o"), TEXT("Sort order") },
         { TEXT("g"), TEXT("Use Human Readable Sizes") },
     };
-    for (int i = 0; i < ARRAYSIZE(options); ++i)
-        _tprintf(_T("    ") ANSI_COLOR_(37) _T("/%s") ANSI_RESET _T("  %s\n"), options[i][0], options[i][1]);
-    _tprintf(TEXT(" use ") ANSI_COLOR_(37) _T("-") ANSI_RESET _T(" to negate an option\n"));
+    if (Ansi)
+    {
+        for (int i = 0; i < ARRAYSIZE(options); ++i)
+            _tprintf(_T("    ") ANSI_COLOR_(37) _T("/%s") ANSI_RESET _T("  %s\n"), options[i][0], options[i][1]);
+        _tprintf(TEXT(" use ") ANSI_COLOR_(37) _T("-") ANSI_RESET _T(" to negate an option\n"));
+    }
+    else
+    {
+        for (int i = 0; i < ARRAYSIZE(options); ++i)
+            _tprintf(_T("    /%s  %s\n"), options[i][0], options[i][1]);
+        _tprintf(TEXT(" use - to negate an option\n"));
+    }
 }
 
 void DisplayPadding(int Count)
@@ -167,28 +177,31 @@ const TCHAR* GetExtension(const TCHAR *Name) // TODO Replace with PathFindExtens
     return TEXT("");
 }
 
-void DisplayName(const std::tstring& BaseDir, const CDirectory::CEntry& dir_entry)
+void DisplayName(const std::tstring& BaseDir, const CDirectory::CEntry& dir_entry, bool Ansi)
 {
-    TCHAR strValue[1024];
-    const TCHAR *KeyName = dir_entry.IsDirectory() ? TEXT("Directory") : GetExtension(dir_entry.GetFileName());
-    GetPrivateProfileString(TEXT("Colour"), KeyName, TEXT(""), strValue, ARRAYSIZE(strValue), g_IniFileName);
+    TCHAR strValue[1024] = TEXT("");
+    if (Ansi)
+    {
+        const TCHAR* KeyName = dir_entry.IsDirectory() ? TEXT("Directory") : GetExtension(dir_entry.GetFileName());
+        GetPrivateProfileString(TEXT("Colour"), KeyName, TEXT(""), strValue, ARRAYSIZE(strValue), g_IniFileName);
+    }
 
-    if (strValue[0] != TEXT('\0'))
+    if (Ansi && strValue[0] != TEXT('\0'))
         _tprintf(ANSI_COLOR, strValue);
 
-    if (!BaseDir.empty())
+    if (Ansi && !BaseDir.empty())
         _tprintf(ESC TEXT("]8;;file://%s%s") ESC TEXT("\\"), BaseDir.c_str(), dir_entry.GetFileName());
 
     _tprintf(dir_entry.GetFileName());
 
-    if (!BaseDir.empty())
+    if (Ansi && !BaseDir.empty())
         _tprintf(ESC TEXT("]8;;") ESC TEXT("\\"));
 
-    if (strValue[0] != TEXT('\0'))
+    if (Ansi && strValue[0] != TEXT('\0'))
         _tprintf(ANSI_RESET);
 }
 
-void DisplayFileDataLong(const std::tstring& BaseDir, const CDirectory::CEntry& dir_entry, NUMBERFMT* nf, bool human, bool ConvertToLocal)
+void DisplayFileDataLong(const std::tstring& BaseDir, const CDirectory::CEntry& dir_entry, NUMBERFMT* nf, bool human, bool ConvertToLocal, bool Ansi)
 {
     _tprintf(TEXT("%c%c%c%c%c ")
         , (dir_entry.IsDirectory() ? TEXT('D') : TEXT('-'))
@@ -203,7 +216,7 @@ void DisplayFileDataLong(const std::tstring& BaseDir, const CDirectory::CEntry& 
     else
         DisplaySize(dir_entry.GetFileSize(), nf, human);
     _tprintf(TEXT(" "));
-    DisplayName(BaseDir, dir_entry);
+    DisplayName(BaseDir, dir_entry, Ansi);
     if (dir_entry.IsReparsePoint())
     {
         Url FullPath(BaseDir + dir_entry.GetFileName());
@@ -214,12 +227,12 @@ void DisplayFileDataLong(const std::tstring& BaseDir, const CDirectory::CEntry& 
     _tprintf(TEXT("\n"));
 }
 
-void DisplayFileDataWide(const std::tstring& BaseDir, const CDirectory::CEntry& dir_entry)
+void DisplayFileDataWide(const std::tstring& BaseDir, const CDirectory::CEntry& dir_entry, bool Ansi)
 {
     if (dir_entry.IsDirectory())
         _tprintf(TEXT("["));
         //printf(u8"\U0001f4c1");
-    DisplayName(BaseDir, dir_entry);
+    DisplayName(BaseDir, dir_entry, Ansi);
     if (dir_entry.IsHidden())
         _tprintf(TEXT("^"));
     if (dir_entry.IsReparsePoint())
@@ -230,7 +243,7 @@ void DisplayFileDataWide(const std::tstring& BaseDir, const CDirectory::CEntry& 
 
 void DisplayFileDataBare(const CDirectory::CEntry& dir_entry)
 {
-    DisplayName(TEXT(""), dir_entry);
+    DisplayName(TEXT(""), dir_entry, false);
     _tprintf(TEXT("\n"));
 }
 
@@ -253,13 +266,13 @@ void DisplayDirListSummary(const std::vector<CDirectory::CEntry>& dirlist, NUMBE
     _tprintf(TEXT(" bytes\n"));
 }
 
-void DisplayDirListLong(const std::tstring& BaseDir, const std::vector<CDirectory::CEntry>& dirlist, NUMBERFMT* nf, bool human, bool ConvertToLocal)
+void DisplayDirListLong(const std::tstring& BaseDir, const std::vector<CDirectory::CEntry>& dirlist, NUMBERFMT* nf, bool human, bool ConvertToLocal, bool Ansi)
 {
     for (std::vector<CDirectory::CEntry>::const_iterator it = dirlist.begin();
         it != dirlist.end(); ++it)
     {
         if (!it->IsDots())
-            DisplayFileDataLong(BaseDir, *it, nf, human, ConvertToLocal);
+            DisplayFileDataLong(BaseDir, *it, nf, human, ConvertToLocal, Ansi);
     }
     DisplayDirListSummary(dirlist, nf, human);
 }
@@ -300,7 +313,7 @@ int GetConsoleWidth()
     return w == nullptr ? 100 : _tstoi(w + 1);
 }
 
-void DisplayDirListWide(const std::tstring& BaseDir, const std::vector<CDirectory::CEntry>& dirlist, NUMBERFMT* nf, bool human)
+void DisplayDirListWide(const std::tstring& BaseDir, const std::vector<CDirectory::CEntry>& dirlist, NUMBERFMT* nf, bool human, bool Ansi)
 {
     const int ScreenWidth = GetConsoleWidth();
     int Width = 12;
@@ -322,7 +335,7 @@ void DisplayDirListWide(const std::tstring& BaseDir, const std::vector<CDirector
     {
         if (!it->IsDots())
         {
-            DisplayFileDataWide(BaseDir, *it);
+            DisplayFileDataWide(BaseDir, *it, Ansi);
             ++Column;
             if (Column >= NoColumns)
             {
@@ -358,6 +371,7 @@ struct Config
     bool DisplayHiddenFiles;
     bool Recursive;
     bool Human;
+    bool Ansi;
 };
 
 std::tstring GetFullPathName(const TCHAR* lpFileName, std::tstring& Pattern)
@@ -401,9 +415,9 @@ void DoDirectory(const Url& DirPattern, const Config& config, NumberFormat& nf)
         if (config.DisplayBareFormat)
             DisplayDirListBare(dirlist);
         else if (config.DisplayWideFormat)
-            DisplayDirListWide(FullBaseDir, dirlist, &nf, config.Human);
+            DisplayDirListWide(FullBaseDir, dirlist, &nf, config.Human, config.Ansi);
         else
-            DisplayDirListLong(FullBaseDir, dirlist, &nf, config.Human, DirPattern.IsLocal());
+            DisplayDirListLong(FullBaseDir, dirlist, &nf, config.Human, DirPattern.IsLocal(), config.Ansi);
         //_tprintf(TEXT("\n"));
     }
 
@@ -468,6 +482,7 @@ int tmain(int argc, TCHAR* argv[])
         config.DisplayHiddenFiles = false;
         config.Recursive = false;
         config.Human = true;
+        config.Ansi = _isatty(_fileno(stdout));
 
         BoolArg boolArg[] =
         {
@@ -551,7 +566,7 @@ int tmain(int argc, TCHAR* argv[])
             nf.Grouping = 0;
 
         if (DisplayWelcomeMsg)
-            DisplayWelcomeMessage();
+            DisplayWelcomeMessage(config.Ansi);
         else
         {
             InitIniFileName();

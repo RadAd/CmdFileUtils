@@ -1,7 +1,8 @@
 #include "AboutMessage.H"
 
 #include <Rad/tstring.h>
-#include <stdio.h>
+#include <cstdio>
+#include <io.h>
 #include <tchar.h>
 
 #define ESC TEXT("\x1B")
@@ -11,6 +12,7 @@
 
 void DisplayAboutMessage(HINSTANCE hInstance, const TCHAR *Product)
 {
+    const bool Ansi = _isatty(_fileno(stdout));
     TCHAR	FileVersion[1024];
 
     TCHAR	FileName[1024];
@@ -41,6 +43,9 @@ void DisplayAboutMessage(HINSTANCE hInstance, const TCHAR *Product)
         _tcscpy_s(FileVersion, TEXT("Unknown"));
     }
 
-    _tprintf(ANSI_COLOR_(37) TEXT("%s") ANSI_RESET TEXT(" Version") ANSI_COLOR_(37) TEXT(" %s\n") ANSI_RESET, Product, FileVersion);
+    if (Ansi)
+        _tprintf(ANSI_COLOR_(37) TEXT("%s") ANSI_RESET TEXT(" Version") ANSI_COLOR_(37) TEXT(" %s\n") ANSI_RESET, Product, FileVersion);
+    else
+        _tprintf(TEXT("%s Version %s\n") ANSI_RESET, Product, FileVersion);
     _tprintf(TEXT(" By Adam Gates (adamgates84+software@gmail.com) - https://github.com/RadAd/CmdFileUtils\n"));
 }

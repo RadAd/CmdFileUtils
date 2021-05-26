@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <io.h>
 
 #include <Rad/WinError.H>
 #include <Rad/Win/WinFile.H>
@@ -11,7 +12,7 @@
 #define ANSI_COLOR_(x) ESC TEXT("[") TEXT(#x) TEXT("m")
 #define ANSI_RESET ESC TEXT("[0m")
 
-void DisplayWelcomeMessage()
+void DisplayWelcomeMessage(bool Ansi)
 {
     const HMODULE	Module = GetModuleHandle(NULL);
     DisplayAboutMessage(Module, TEXT("RadSync"));
@@ -22,9 +23,18 @@ void DisplayWelcomeMessage()
         { TEXT("h"),  TEXT("Hidden - copy hidden files as well") },
         { TEXT("d"),  TEXT("Delete - delete files in destination") },
     };
-    for (int i = 0; i < ARRAYSIZE(options); ++i)
-        _tprintf(_T("    ") ANSI_COLOR_(37) _T("/%s") ANSI_RESET _T("  %s\n"), options[i][0], options[i][1]);
-    _tprintf(TEXT(" use ") ANSI_COLOR_(37) _T("-") ANSI_RESET _T(" to negate an option\n"));
+    if (Ansi)
+    {
+        for (int i = 0; i < ARRAYSIZE(options); ++i)
+            _tprintf(_T("    ") ANSI_COLOR_(37) _T("/%s") ANSI_RESET _T("  %s\n"), options[i][0], options[i][1]);
+        _tprintf(TEXT(" use ") ANSI_COLOR_(37) _T("-") ANSI_RESET _T(" to negate an option\n"));
+    }
+    else
+    {
+        for (int i = 0; i < ARRAYSIZE(options); ++i)
+            _tprintf(_T("    /%s  %s\n"), options[i][0], options[i][1]);
+        _tprintf(TEXT(" use - to negate an option\n"));
+    }
 }
 
 struct Options
@@ -239,6 +249,7 @@ int tmain(int argc, TCHAR* argv[])
 {
     try
     {
+        const bool Ansi = _isatty(_fileno(stdout));
         Options options;
         std::vector<const TCHAR*> my_args;
 
@@ -279,7 +290,7 @@ int tmain(int argc, TCHAR* argv[])
             SyncDirectories(my_args[0], my_args[1], options);
         }
         else
-            DisplayWelcomeMessage();
+            DisplayWelcomeMessage(Ansi);
     }
     catch (const rad::WinError& e)
     {

@@ -1,4 +1,5 @@
 //#include <TChar.H>
+#include <io.h>
 
 #include <Rad/Win/WinFile.h>
 #include <Rad/Win/WinInetFile.h>
@@ -251,6 +252,7 @@ int tmain(int argc, TCHAR *argv[])
 
     try
     {
+        const bool Ansi = _isatty(_fileno(stdout));
         const TCHAR* InputFile = 0;
         const TCHAR* OutputFile = 0;
         TCHAR Cookie[1024] = TEXT("");
@@ -352,8 +354,16 @@ int tmain(int argc, TCHAR *argv[])
                 { TEXT("newer  "),  TEXT("Check if newer than local (http only)") },
                 { TEXT("cookie "),  TEXT("Add a cookie to the headers (http only)") },
             };
-            for (int i = 0; i < ARRAYSIZE(options); ++i)
-                _tprintf(_T("    ") ANSI_COLOR_(37) _T("/%s") ANSI_RESET _T("  %s\n"), options[i][0], options[i][1]);
+            if (Ansi)
+            {
+                for (int i = 0; i < ARRAYSIZE(options); ++i)
+                    _tprintf(_T("    ") ANSI_COLOR_(37) _T("/%s") ANSI_RESET _T("  %s\n"), options[i][0], options[i][1]);
+            }
+            else
+            {
+                for (int i = 0; i < ARRAYSIZE(options); ++i)
+                    _tprintf(_T("    /%s  %s\n"), options[i][0], options[i][1]);
+            }
         }
     }
     catch(const rad::WinError &e)
