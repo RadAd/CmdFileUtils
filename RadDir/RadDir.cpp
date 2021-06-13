@@ -96,27 +96,23 @@ void DisplayPadding(int Count)
     }
 }
 
-void DisplayTime(const FILETIME& time, bool ConvertToLocal)
+void DisplayTime(const FILETIME& time)
 {
-    SYSTEMTIME stUTC, stLocal;
-    if (FileTimeToSystemTime(&time, &stUTC) == 0)
-        rad::ThrowWinError();
-    if (ConvertToLocal)
-    {
-        if (SystemTimeToTzSpecificLocalTime(NULL, &stUTC, &stLocal) == 0)
-            rad::ThrowWinError();
-    }
-    else
-        stLocal = stUTC;
+    // TODO Need to test if this is showing ftp filetime correctly - may need to convert to localtime
+    TCHAR DateTime[1024];
+    DWORD dwFlags = FDTF_SHORTDATE | FDTF_SHORTTIME | FDTF_NOAUTOREADINGORDER;
+    SHFormatDateTime(&time, &dwFlags, DateTime, ARRAYSIZE(DateTime));
+    // TODO Time portion is correctly right aligned.
+    TCHAR* space = _tcschr(DateTime, _T(' '));
+    if (space != nullptr && space[2] == _T(':'))
+        //_tcscpy_s(space + 1, ARRAYSIZE(DateTime) - (space - DateTime) - 1, space);
+#ifdef UNICODE
+        wmemmove(space + 1, space, wcslen(space) + 1);
+#else
+        memmove(space + 1, space, wcslen(space) + 1);
+#endif
 
-
-    TCHAR Date[1024];
-    /*int Length =*/ GetDateFormat(LOCALE_USER_DEFAULT, DATE_SHORTDATE, &stLocal, NULL, Date, ARRAYSIZE(Date));
-
-    TCHAR Time[1024];
-    /*int Length =*/ GetTimeFormat(LOCALE_USER_DEFAULT, TIME_NOSECONDS, &stLocal, NULL, Time, ARRAYSIZE(Time));
-
-    _tprintf(_T("%10s %8s"), Date, Time);
+    _tprintf(DateTime);
 }
 
 void DisplaySize(ULARGE_INTEGER size, bool human)
@@ -125,6 +121,7 @@ void DisplaySize(ULARGE_INTEGER size, bool human)
     if (human)
     {
         // TODO Try StrFormatByteSizeEx
+        // Note: In Windows 10, size is reported in base 10 rather than base 2. For example, 1 KB is 1000 bytes rather than 1024.
         StrFormatByteSize64(size.QuadPart, Number, ARRAYSIZE(Number));
         const size_t len = _tcslen(Number);
         if (_tcscmp(Number + len - 5, _T("bytes")) == 0)
@@ -132,7 +129,7 @@ void DisplaySize(ULARGE_INTEGER size, bool human)
     }
     else
     {
-        _stprintf_s(Number, TEXT("%d"), (int) size.QuadPart);
+        _stprintf_s(Number, TEXT("%llu"), size.QuadPart);
     }
     _tprintf(_T("%14s"), Number);
 }
@@ -179,7 +176,7 @@ void DisplayName(const std::tstring& BaseDir, const CDirectory::CEntry& dir_entr
         _tprintf(ANSI_RESET);
 }
 
-void DisplayFileDataLong(const std::tstring& BaseDir, const CDirectory::CEntry& dir_entry, bool human, bool ConvertToLocal, bool Ansi)
+void DisplayFileDataLong(const std::tstring& BaseDir, const CDirectory::CEntry& dir_entry, bool human, bool Ansi)
 {
     _tprintf(TEXT("%c%c%c%c%c ")
         , (dir_entry.IsDirectory() ? TEXT('D') : TEXT('-'))
@@ -188,7 +185,7 @@ void DisplayFileDataLong(const std::tstring& BaseDir, const CDirectory::CEntry& 
         , (dir_entry.IsSystem() ? TEXT('S') : TEXT('-'))
         , (dir_entry.IsHidden() ? TEXT('H') : TEXT('-'))
         );
-    DisplayTime(dir_entry.ftLastWriteTime, ConvertToLocal);
+    DisplayTime(dir_entry.ftLastWriteTime);
     if (dir_entry.IsDirectory())
         _tprintf(_T("%14s"), _T(""));
     else
@@ -241,16 +238,16 @@ void DisplayDirListSummary(const std::vector<CDirectory::CEntry>& dirlist, bool 
     }
     _tprintf(TEXT("  %3d File(s) %3d Dir(s) "), CountFiles, CountDirectories);
     DisplaySize(CountSize, human);
-    _tprintf(TEXT(" bytes\n"));
+    _tprintf(TEXT("\n"));
 }
 
-void DisplayDirListLong(const std::tstring& BaseDir, const std::vector<CDirectory::CEntry>& dirlist, bool human, bool ConvertToLocal, bool Ansi)
+void DisplayDirListLong(const std::tstring& BaseDir, const std::vector<CDirectory::CEntry>& dirlist, bool human, bool Ansi)
 {
     for (std::vector<CDirectory::CEntry>::const_iterator it = dirlist.begin();
         it != dirlist.end(); ++it)
     {
         if (!it->IsDots())
-            DisplayFileDataLong(BaseDir, *it, human, ConvertToLocal, Ansi);
+            DisplayFileDataLong(BaseDir, *it, human, Ansi);
     }
     DisplayDirListSummary(dirlist, human);
 }
@@ -394,7 +391,7 @@ void DoDirectory(const Url& DirPattern, const Config& config)
         else if (config.DisplayWideFormat)
             DisplayDirListWide(FullBaseDir, dirlist, config.Human, config.Ansi);
         else
-            DisplayDirListLong(FullBaseDir, dirlist, config.Human, DirPattern.IsLocal(), config.Ansi);
+            DisplayDirListLong(FullBaseDir, dirlist, config.Human, config.Ansi);
         //_tprintf(TEXT("\n"));
     }
 
