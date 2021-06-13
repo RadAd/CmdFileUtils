@@ -1,6 +1,6 @@
 #include "AboutMessage.H"
 
-#include <Rad/tstring.h>
+#include "../tstring.h"
 #include <cstdio>
 #include <io.h>
 #include <tchar.h>

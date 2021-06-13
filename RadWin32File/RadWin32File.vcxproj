@@ -23,7 +23,10 @@
     <ClInclude Include="Rad\Directory.h" />
     <ClInclude Include="Rad\DirHelper.h" />
     <ClInclude Include="Rad\NumberFormat.h" />
+    <ClInclude Include="Rad\tstring.h" />
+    <ClInclude Include="Rad\WinError.h" />
     <ClInclude Include="Rad\Win\WinFile.H" />
+    <ClInclude Include="Rad\Win\WinHandle.h" />
     <ClInclude Include="Rad\Win\WinInetFile.h" />
     <ClInclude Include="Rad\Win\WinInetHandle.h" />
   </ItemGroup>
@@ -31,11 +34,9 @@
     <ClCompile Include="Rad\About\AboutMessage.cpp" />
     <ClCompile Include="Rad\DirHelper.cpp" />
     <ClCompile Include="Rad\NumberFormat.cpp" />
+    <ClCompile Include="Rad\WinError.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\RadWin32\RadWin32.vcxproj">
-      <Project>{5a74a52f-2903-436a-b223-1212b11deb75}</Project>
-    </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{56BD95CA-495C-4282-8826-F922EA44BD46}</ProjectGuid>
@@ -60,7 +61,7 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\RadWin32\Default.props" />
+    <Import Project="Default.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup>

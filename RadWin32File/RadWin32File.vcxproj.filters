@@ -24,6 +24,11 @@
     <ClInclude Include="Rad\Directory.h" />
     <ClInclude Include="Rad\DirHelper.h" />
     <ClInclude Include="Rad\NumberFormat.h" />
+    <ClInclude Include="Rad\tstring.h" />
+    <ClInclude Include="Rad\WinError.h" />
+    <ClInclude Include="Rad\Win\WinHandle.h">
+      <Filter>Win</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Rad\About\AboutMessage.cpp">
@@ -31,5 +36,6 @@
     </ClCompile>
     <ClCompile Include="Rad\DirHelper.cpp" />
     <ClCompile Include="Rad\NumberFormat.cpp" />
+    <ClCompile Include="Rad\WinError.cpp" />
   </ItemGroup>
 </Project>

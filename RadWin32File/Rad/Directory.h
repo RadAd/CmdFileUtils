@@ -4,7 +4,7 @@
 #include <Windows.h>
 #include <string>
 #include <TChar.h>
-#include <Rad/tstring.h>
+#include "tstring.h"
 
 class CDirectory
 {

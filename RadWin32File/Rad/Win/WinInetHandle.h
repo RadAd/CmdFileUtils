@@ -1,8 +1,8 @@
 #ifndef WININETHANDLE_H
 #define WININETHANDLE_H
 
-#include <Rad/WinError.h>
-#include <Rad/Win/WinHandle.h>
+#include "WinError.h"
+#include "WinHandle.h"
 #include <WinInet.H>
 
 inline void ThrowWinInetError()

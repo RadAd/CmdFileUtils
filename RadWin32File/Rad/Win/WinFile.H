@@ -1,7 +1,7 @@
 #ifndef WINFILE_H
 #define WINFILE_H
 
-#include <Rad/Win/WinHandle.h>
+#include "WinHandle.h"
 
 class CWinFile
 {

@@ -29,11 +29,8 @@
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-  <Import Project="$(SolutionDir)\RadWin32\Default.props" />
+  <Import Project="$(SolutionDir)\RadWin32File\Default.props" />
   <ItemGroup>
-    <ProjectReference Include="..\RadWin32\RadWin32.vcxproj">
-      <Project>{5a74a52f-2903-436a-b223-1212b11deb75}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\RadWin32File\RadWin32File.vcxproj">
       <Project>{56bd95ca-495c-4282-8826-f922ea44bd46}</Project>
     </ProjectReference>
