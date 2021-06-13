@@ -10,7 +10,6 @@
 
 // TODO
 // If output is a directory append name
-// Taskbar progress
 // Output to stdout
 
 #define ESC TEXT("\x1B")

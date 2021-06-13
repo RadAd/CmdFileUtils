@@ -34,7 +34,9 @@ public:
 
     ~DrawProgress()
     {
-        _ftprintf(out, _T("%*s\n"), 79, _T(""));
+        //_ftprintf(out, _T("%*s\n"), 79, _T(""));
+        _ftprintf(out, L"\x1b]9;4;0;0\x1b\\");
+        _ftprintf(out, L"\x1b[2K");
         fclose(out);
     }
 
@@ -56,6 +58,7 @@ public:
             int hash_count = (int) (percent * width + 0.5);
             _ftprintf(out, _T("[%.*s%.*s]"), hash_count, _T("############################################################"), width - hash_count, _T("............................................................"));
             _ftprintf(out, _T("%7.2f%% "), percent * 100.0);
+            _ftprintf(out, L"\x1b]9;4;1;%d\x1b\\", static_cast<int>(percent * 100 + 0.05));
 
             DisplaySize(out, Transferred, m_nf);
             _ftprintf(out, _T("/"));
