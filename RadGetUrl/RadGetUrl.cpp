@@ -35,11 +35,19 @@ bool GetUrl(CWinInetFile& IFile, TCHAR* Url, DWORD dwSize)
         && InternetCanonicalizeUrl(Url, Url, &(Size = 1024), ICU_DECODE | ICU_NO_ENCODE) != FALSE;
 }
 
-RetCode HttpDownload(const CWinInetHandle& inet, const TCHAR* InputFile, const TCHAR* OutputFile, DWORD& StatusCode, bool ShowHeaders, bool Reload, bool CheckNewer, const TCHAR* Cookie, const NUMBERFMT* nf)
+struct Options
+{
+    bool ShowHeaders;
+    bool Reload;
+    bool CheckNewer;
+    bool Quiet;
+};
+
+RetCode HttpDownload(const CWinInetHandle& inet, const TCHAR* InputFile, const TCHAR* OutputFile, DWORD& StatusCode, const Options& options, const TCHAR* Cookie, const NUMBERFMT* nf)
 {
     CWinInetHttpFile IFile;
     DWORD Flags = 0;
-    if (Reload)
+    if (options.Reload)
         Flags |= INTERNET_FLAG_RELOAD;
 #if TRUE
     std::tstring Header;
@@ -69,7 +77,7 @@ RetCode HttpDownload(const CWinInetHandle& inet, const TCHAR* InputFile, const T
         {
             if (!OutputFile && IFile.GetContentDisposition(ContentDisposition, 1024))
             {
-                _tprintf(_T("ContentDisposition: %s\n"), ContentDisposition);
+                if (!options.Quiet) _tprintf(_T("ContentDisposition: %s\n"), ContentDisposition);
                 OutputFile = _tcsstr(ContentDisposition, TEXT("filename="));
                 if (OutputFile)
                 {
@@ -95,7 +103,7 @@ RetCode HttpDownload(const CWinInetHandle& inet, const TCHAR* InputFile, const T
         {
             if (!OutputFile && GetUrl(IFile, Url, 1024))
             {
-                _tprintf(_T("Url: %s\n"), Url);
+                if (!options.Quiet) _tprintf(_T("Url: %s\n"), Url);
                 OutputFile = _tcsrchr(Url, TEXT('/'));
                 if (OutputFile)
                 {
@@ -112,8 +120,8 @@ RetCode HttpDownload(const CWinInetHandle& inet, const TCHAR* InputFile, const T
     }
 
     if (StatusCode != HTTP_STATUS_OK)
-        _tprintf(_T("Status: %u\n"), StatusCode);
-    if (ShowHeaders)
+        if (!options.Quiet) _tprintf(_T("Status: %u\n"), StatusCode);
+    if (options.ShowHeaders)
     {
         TCHAR Headers[4096] = TEXT("");
         if (IFile.GetHeaders(Headers, 4095))
@@ -124,23 +132,27 @@ RetCode HttpDownload(const CWinInetHandle& inet, const TCHAR* InputFile, const T
             _tprintf(_T("Headers: Error %u\n"), e);
         }
     }
-    _tprintf(_T("Output: %s\n"), OutputFile);
+    if (!options.Quiet) _tprintf(_T("Output: %s\n"), OutputFile);
+    if (!options.Quiet)
     {
         TCHAR ContentType[1024] = TEXT("");
         IFile.GetContentType(ContentType, 1023);
         _tprintf(_T("ContentType: %s\n"), ContentType);
     }
-    _tprintf(_T("Size: "));
-    if (FileSize.QuadPart != INT64_MAX)
-        DisplaySize(stdout, FileSize, nf);
-    else
-        _tprintf(_T("Unknown"));
-    _tprintf(_T("\n"));
+    if (!options.Quiet)
+    {
+        _tprintf(_T("Size: "));
+        if (FileSize.QuadPart != INT64_MAX)
+            DisplaySize(stdout, FileSize, nf);
+        else
+            _tprintf(_T("Unknown"));
+    }
+    if (!options.Quiet) _tprintf(_T("\n"));
 
     if (StatusCode < HTTP_STATUS_BAD_REQUEST)
     {
         bool Skip = false;
-        if (CheckNewer && SysFileDateValid)
+        if (options.CheckNewer && SysFileDateValid)
         {
             CWinFile OFile;
             OFile.Open(OutputFile, FILE_READ_DATA | FILE_READ_ATTRIBUTES, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
@@ -163,7 +175,7 @@ RetCode HttpDownload(const CWinInetHandle& inet, const TCHAR* InputFile, const T
             CWinFile OFile;
             const DWORD Share = _tcscmp(OutputFile, TEXT("CONOUT$")) == 0 ? FILE_SHARE_WRITE : 0;
             OFile.Open(OutputFile, GENERIC_WRITE | FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES, Share, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL);
-            CopyFile(IFile, OFile, FileSize, nf);
+            CopyFile(IFile, OFile, FileSize, nf, options.Quiet);
 
             if (SysFileDateValid && OFile.GetType() == FILE_TYPE_DISK)
             {
@@ -179,7 +191,7 @@ RetCode HttpDownload(const CWinInetHandle& inet, const TCHAR* InputFile, const T
         }
         else
         {
-            _tprintf(_T("Skipping, file is newer.\n"));
+            if (!options.Quiet) _tprintf(_T("Skipping, file is newer.\n"));
             return RetCode::SKIP_FILE;
         }
     }
@@ -187,7 +199,7 @@ RetCode HttpDownload(const CWinInetHandle& inet, const TCHAR* InputFile, const T
         return RetCode::BAD_REQUEST;
 }
 
-RetCode FtpDownload(const CWinInetHandle& inet, const TCHAR* Host, INTERNET_PORT nPort, const TCHAR* User, const TCHAR* Password, const TCHAR* Path, const TCHAR* InputFile, const TCHAR* OutputFile, bool Reload, const NUMBERFMT* nf)
+RetCode FtpDownload(const CWinInetHandle& inet, const TCHAR* Host, INTERNET_PORT nPort, const TCHAR* User, const TCHAR* Password, const TCHAR* Path, const TCHAR* InputFile, const TCHAR* OutputFile, bool Reload, bool Quiet, const NUMBERFMT* nf)
 {
     DWORD Flags = INTERNET_FLAG_PASSIVE;
     if (Reload)
@@ -233,15 +245,18 @@ RetCode FtpDownload(const CWinInetHandle& inet, const TCHAR* Host, INTERNET_PORT
 
         CWinInetFile::FileSizeT FileSize = IFile.GetSize();
 
-        _tprintf(_T("Output: %s\n"), OutputFile);
-        _tprintf(_T("Size: "));
-        DisplaySize(stdout, FileSize, nf);
-        _tprintf(_T("\n"));
+        if (!Quiet)
+        {
+            _tprintf(_T("Output: %s\n"), OutputFile);
+            _tprintf(_T("Size: "));
+            DisplaySize(stdout, FileSize, nf);
+            _tprintf(_T("\n"));
+        }
 
         CWinFile OFile;
         const DWORD Share = _tcscmp(OutputFile, TEXT("CONOUT$")) == 0 ? FILE_SHARE_WRITE : 0;
         OFile.Open(OutputFile, GENERIC_WRITE | FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES, Share, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL);
-        CopyFile(IFile, OFile, FileSize, nf);
+        CopyFile(IFile, OFile, FileSize, nf, Quiet);
 
         OFile.SetTime(NULL, NULL, &dir_entry.ftLastWriteTime);
     }
@@ -260,10 +275,8 @@ int tmain(int argc, TCHAR *argv[])
         const TCHAR* InputFile = 0;
         const TCHAR* OutputFile = 0;
         TCHAR Cookie[1024] = TEXT("");
+        Options options = {};
         bool UseHttp = false;
-        bool ShowHeaders = false;
-        bool Reload = false;
-        bool CheckNewer = false;
         bool ShowUsage = false;
 
         NumberFormat    nf(LOCALE_USER_DEFAULT);
@@ -276,11 +289,11 @@ int tmain(int argc, TCHAR *argv[])
                 if (_tcscmp(argv[i] + 1, TEXT("http")) == 0)
                     UseHttp = true;
                 else if (_tcscmp(argv[i] + 1, TEXT("headers")) == 0)
-                    ShowHeaders = true;
+                    options.ShowHeaders = true;
                 else if (_tcscmp(argv[i] + 1, TEXT("reload")) == 0)
-                    Reload = true;
+                    options.Reload = true;
                 else if (_tcscmp(argv[i] + 1, TEXT("newer")) == 0)
-                    CheckNewer = true;
+                    options.CheckNewer = true;
                 else if (_tcscmp(argv[i] + 1, TEXT("cookie")) == 0)
                 {
                     ++i;
@@ -288,6 +301,8 @@ int tmain(int argc, TCHAR *argv[])
                         _tcscat_s(Cookie, TEXT("; "));
                     _tcscat_s(Cookie, argv[i]);
                 }
+                else if (_tcscmp(argv[i] + 1, TEXT("quiet")) == 0)
+                    options.Quiet = true;
                 else if (_tcscmp(argv[i] + 1, TEXT("?")) == 0)
                     ShowUsage = true;
                 else
@@ -313,8 +328,8 @@ int tmain(int argc, TCHAR *argv[])
 #endif
         if (!ShowUsage && InputFile)
         {
-            _tprintf(_T("Input: %s\n"), InputFile);
-            //_tprintf(_T("Output: %s\n"), OutputFile);
+            if (!options.Quiet) _tprintf(_T("Input: %s\n"), InputFile);
+            //if (!options.Quiet) _tprintf(_T("Output: %s\n"), OutputFile);
 
             CWinInetHandle inet(InternetOpen(TEXT("RadGetUrl"), INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0));
             //CWinInetHandle inet(InternetOpen(TEXT("RadGetUrl"), INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0));
@@ -327,16 +342,16 @@ int tmain(int argc, TCHAR *argv[])
             {
             case INTERNET_SCHEME_HTTP:
             case INTERNET_SCHEME_HTTPS:
-                r = HttpDownload(inet, InputFile, OutputFile, StatusCode, ShowHeaders, Reload, CheckNewer, Cookie, &nf);
+                r = HttpDownload(inet, InputFile, OutputFile, StatusCode, options, Cookie, &nf);
                 break;
 
             case INTERNET_SCHEME_FTP:
                 if (UseHttp)
-                    r = HttpDownload(inet, InputFile, OutputFile, StatusCode, ShowHeaders, Reload, CheckNewer, Cookie, &nf);
+                    r = HttpDownload(inet, InputFile, OutputFile, StatusCode, options, Cookie, &nf);
                 else
                     // TODO Cant show headers
                     // TODO Use CheckNewer
-                    r = FtpDownload(inet, UrlInput.GetHost(), UrlInput.nPort, UrlInput.GetUser(), UrlInput.GetPassword(), UrlInput.GetPath(), InputFile, OutputFile, Reload, &nf);
+                    r = FtpDownload(inet, UrlInput.GetHost(), UrlInput.nPort, UrlInput.GetUser(), UrlInput.GetPassword(), UrlInput.GetPath(), InputFile, OutputFile, options.Reload, options.Quiet, &nf);
                 break;
 
             default:
@@ -351,22 +366,23 @@ int tmain(int argc, TCHAR *argv[])
             DisplayAboutMessage(Module, TEXT("RadGetUrl"));
 
             _tprintf(TEXT("\nDownload a file from a url.\n\nRadGetUrl <options> [InputFile] <OutputFile>\n\nOptions:\n"));
-            TCHAR* options[][2] = {
+            const TCHAR* optionsstr[][2] = {
                 { TEXT("http   "),  TEXT("Force http download") },
                 { TEXT("headers"),  TEXT("Show headers (http only)") },
                 { TEXT("reload "),  TEXT("Force a reload") },
                 { TEXT("newer  "),  TEXT("Check if newer than local (http only)") },
                 { TEXT("cookie "),  TEXT("Add a cookie to the headers (http only)") },
+                { TEXT("quiet  "),  TEXT("Suppress output") },
             };
             if (Ansi)
             {
-                for (int i = 0; i < ARRAYSIZE(options); ++i)
-                    _tprintf(_T("    ") ANSI_COLOR_(37) _T("/%s") ANSI_RESET _T("  %s\n"), options[i][0], options[i][1]);
+                for (int i = 0; i < ARRAYSIZE(optionsstr); ++i)
+                    _tprintf(_T("    ") ANSI_COLOR_(37) _T("/%s") ANSI_RESET _T("  %s\n"), optionsstr[i][0], optionsstr[i][1]);
             }
             else
             {
-                for (int i = 0; i < ARRAYSIZE(options); ++i)
-                    _tprintf(_T("    /%s  %s\n"), options[i][0], options[i][1]);
+                for (int i = 0; i < ARRAYSIZE(optionsstr); ++i)
+                    _tprintf(_T("    /%s  %s\n"), optionsstr[i][0], optionsstr[i][1]);
             }
         }
     }

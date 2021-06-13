@@ -12,6 +12,8 @@
 #define ANSI_COLOR_(x) ESC TEXT("[") TEXT(#x) TEXT("m")
 #define ANSI_RESET ESC TEXT("[0m")
 
+// TODO dir_entry.ftLastWriteTime is in the local zone for remote files and utc for local files
+
 void DisplayWelcomeMessage(bool Ansi)
 {
     const HMODULE	Module = GetModuleHandle(NULL);

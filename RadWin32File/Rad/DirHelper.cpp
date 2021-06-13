@@ -249,7 +249,7 @@ private:
     CWinInetHttpFile m_file;
 };
 
-void CopyFile(CWinInetFile& IFile, CWinFile& OFile, CWinInetFile::FileSizeT FileSize, const NUMBERFMT* nf)
+void CopyFile(CWinInetFile& IFile, CWinFile& OFile, CWinInetFile::FileSizeT FileSize, const NUMBERFMT* nf, bool Quiet)
 {
     const int BufferSize = 1024 * 10;
     TCHAR *Buffer = new TCHAR[BufferSize];
@@ -273,7 +273,7 @@ void CopyFile(CWinInetFile& IFile, CWinFile& OFile, CWinInetFile::FileSizeT File
             break;
         }
 
-        dp.Draw(TotalRead, FileSize);
+        if (!Quiet) dp.Draw(TotalRead, FileSize);
     }
     delete [] Buffer;
 }
@@ -664,7 +664,7 @@ bool Url::GetLocally(const TCHAR* destination, const NUMBERFMT* nf) const
 
             CWinFile OFile;
             OFile.Open(destination, FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL);
-            CopyFile(IFile, OFile, FileSize, nf);
+            CopyFile(IFile, OFile, FileSize, nf, false);
         }
 #endif
         break;
@@ -682,7 +682,7 @@ bool Url::GetLocally(const TCHAR* destination, const NUMBERFMT* nf) const
             CWinInetFile::FileSizeT FileSize;
             IFile.GetSize(&FileSize);
 
-            CopyFile(IFile, OFile, FileSize, nf);
+            CopyFile(IFile, OFile, FileSize, nf, false);
         }
         break;
 
@@ -756,6 +756,7 @@ void GetDirectory(const Url& url, std::vector<CDirectory::CEntry>& dirlist, bool
 
         CDirectory::CEntry  dir_entry;
         CWinInetHandle find = FtpFindFirstFile(ftp.Get(), Search, &dir_entry, 0, 0);
+        // NOTE dir_entry.ftLastWriteTime /etc are in the local time zone
         if (find.Get() != NULL)
         {
             do

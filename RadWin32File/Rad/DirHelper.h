@@ -22,7 +22,7 @@ public:
     virtual DWORD Write(void const *Buffer, const DWORD Size) = 0;
 };
 
-void CopyFile(CWinInetFile& IFile, CWinFile& OFile, CWinInetFile::FileSizeT FileSize, const NUMBERFMT* nf);
+void CopyFile(CWinInetFile& IFile, CWinFile& OFile, CWinInetFile::FileSizeT FileSize, const NUMBERFMT* nf, bool Quiet);
 
 class Url : public URL_COMPONENTS
 {
