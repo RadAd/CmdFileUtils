@@ -30,7 +30,7 @@ void DisplaySize(FILE* out, ULARGE_INTEGER size, const NUMBERFMT* nf)
     _stprintf_s(NumberIn, TEXT("%d"), (int) size.QuadPart);
 
     TCHAR Number[1024];
-    /*int Length =*/ GetNumberFormat(LOCALE_USER_DEFAULT, 0, NumberIn, nf, Number, 1024);
+    /*int Length =*/ GetNumberFormat(LOCALE_USER_DEFAULT, 0, NumberIn, nf, Number, ARRAYSIZE(Number));
     //DisplayPadding(o, 15 - Length);
 
     _ftprintf(out, Number);

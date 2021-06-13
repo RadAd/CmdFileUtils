@@ -43,7 +43,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>kernel32.lib;version.lib;wininet.lib;Advapi32.lib</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;version.lib;wininet.lib;Advapi32.lib;Shlwapi.lib</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>

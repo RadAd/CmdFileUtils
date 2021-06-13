@@ -3,6 +3,7 @@
 
 #include <windows.h>
 #include <tchar.h>
+#include <Shlwapi.h>
 #include <fileapi.h>
 #include <io.h>
 
@@ -10,7 +11,6 @@
 //#include <Rad/Win/Reg.h>
 #include <Rad/About/AboutMessage.h>
 #include <Rad/DirHelper.h>
-#include <Rad/NumberFormat.h>
 
 //#include "Environment.H"
 
@@ -61,7 +61,6 @@ void DisplayWelcomeMessage(bool Ansi)
     _tprintf(TEXT("\nDisplays a list of files and subdirectories in a directory.\n\nRadDir <options> <directory>\n\nOptions:\n"));
     TCHAR* options[][2] = {
         { TEXT("?"), TEXT("Display Usage") },
-        { TEXT("c"), TEXT("Use Thousand Separator") },
         { TEXT("w"), TEXT("Display Wide Format") },
         { TEXT("b"), TEXT("Display Bare Format") },
         { TEXT("h"), TEXT("Display Hidden Files") },
@@ -120,43 +119,22 @@ void DisplayTime(const FILETIME& time, bool ConvertToLocal)
     _tprintf(_T("%10s %8s"), Date, Time);
 }
 
-void DisplaySize(ULARGE_INTEGER size, NUMBERFMT* nf, bool human)
+void DisplaySize(ULARGE_INTEGER size, bool human)
 {
-    TCHAR m[] = TEXT(" KMG");
-    int i = 0;
-    UINT NumDigits = nf->NumDigits;
-
-    TCHAR NumberIn[1024];
-
-    if (human)
-    {
-        double s = (double) size.QuadPart;
-        while (s > (1024 * 9 / 10) && i < ARRAYSIZE(m))
-        {
-            s /= 1024;
-            ++i;
-        }
-        if (i == 0)
-        {
-            nf->NumDigits = 0;
-        }
-
-        _stprintf_s(NumberIn, TEXT("%f"), s);
-    }
-    else
-    {
-        nf->NumDigits = 0;
-        _stprintf_s(NumberIn, TEXT("%d"), (int) size.QuadPart);
-    }
-
     TCHAR Number[1024];
-    /*int Length =*/ GetNumberFormat(LOCALE_USER_DEFAULT, 0, NumberIn, nf, Number, ARRAYSIZE(Number));
-
     if (human)
-        _tprintf(_T("%13s%c"), Number, m[i]);
+    {
+        // TODO Try StrFormatByteSizeEx
+        StrFormatByteSize64(size.QuadPart, Number, ARRAYSIZE(Number));
+        const size_t len = _tcslen(Number);
+        if (_tcscmp(Number + len - 5, _T("bytes")) == 0)
+            _tcscpy_s(Number + len - 5, ARRAYSIZE(Number) - len + 5, _T(" B"));
+    }
     else
-        _tprintf(_T("%14s"), Number);
-    nf->NumDigits = NumDigits;
+    {
+        _stprintf_s(Number, TEXT("%d"), (int) size.QuadPart);
+    }
+    _tprintf(_T("%14s"), Number);
 }
 
 const TCHAR* GetExtension(const TCHAR *Name) // TODO Replace with PathFindExtension
@@ -201,7 +179,7 @@ void DisplayName(const std::tstring& BaseDir, const CDirectory::CEntry& dir_entr
         _tprintf(ANSI_RESET);
 }
 
-void DisplayFileDataLong(const std::tstring& BaseDir, const CDirectory::CEntry& dir_entry, NUMBERFMT* nf, bool human, bool ConvertToLocal, bool Ansi)
+void DisplayFileDataLong(const std::tstring& BaseDir, const CDirectory::CEntry& dir_entry, bool human, bool ConvertToLocal, bool Ansi)
 {
     _tprintf(TEXT("%c%c%c%c%c ")
         , (dir_entry.IsDirectory() ? TEXT('D') : TEXT('-'))
@@ -214,7 +192,7 @@ void DisplayFileDataLong(const std::tstring& BaseDir, const CDirectory::CEntry& 
     if (dir_entry.IsDirectory())
         _tprintf(_T("%14s"), _T(""));
     else
-        DisplaySize(dir_entry.GetFileSize(), nf, human);
+        DisplaySize(dir_entry.GetFileSize(), human);
     _tprintf(TEXT(" "));
     DisplayName(BaseDir, dir_entry, Ansi);
     if (dir_entry.IsReparsePoint())
@@ -247,7 +225,7 @@ void DisplayFileDataBare(const CDirectory::CEntry& dir_entry)
     _tprintf(TEXT("\n"));
 }
 
-void DisplayDirListSummary(const std::vector<CDirectory::CEntry>& dirlist, NUMBERFMT* nf, bool human)
+void DisplayDirListSummary(const std::vector<CDirectory::CEntry>& dirlist, bool human)
 {
     int CountFiles = 0;
     int CountDirectories = 0;
@@ -261,20 +239,20 @@ void DisplayDirListSummary(const std::vector<CDirectory::CEntry>& dirlist, NUMBE
             ++CountFiles;
         CountSize.QuadPart += it->GetFileSize().QuadPart;
     }
-    _tprintf(TEXT("    %d File(s)   %d Dir(s) "), CountFiles, CountDirectories);
-    DisplaySize(CountSize, nf, human);
+    _tprintf(TEXT("  %3d File(s) %3d Dir(s) "), CountFiles, CountDirectories);
+    DisplaySize(CountSize, human);
     _tprintf(TEXT(" bytes\n"));
 }
 
-void DisplayDirListLong(const std::tstring& BaseDir, const std::vector<CDirectory::CEntry>& dirlist, NUMBERFMT* nf, bool human, bool ConvertToLocal, bool Ansi)
+void DisplayDirListLong(const std::tstring& BaseDir, const std::vector<CDirectory::CEntry>& dirlist, bool human, bool ConvertToLocal, bool Ansi)
 {
     for (std::vector<CDirectory::CEntry>::const_iterator it = dirlist.begin();
         it != dirlist.end(); ++it)
     {
         if (!it->IsDots())
-            DisplayFileDataLong(BaseDir, *it, nf, human, ConvertToLocal, Ansi);
+            DisplayFileDataLong(BaseDir, *it, human, ConvertToLocal, Ansi);
     }
-    DisplayDirListSummary(dirlist, nf, human);
+    DisplayDirListSummary(dirlist, human);
 }
 
 int GetFileNameLenWide(const CDirectory::CEntry& dir_entry)
@@ -313,7 +291,7 @@ int GetConsoleWidth()
     return w == nullptr ? 100 : _tstoi(w + 1);
 }
 
-void DisplayDirListWide(const std::tstring& BaseDir, const std::vector<CDirectory::CEntry>& dirlist, NUMBERFMT* nf, bool human, bool Ansi)
+void DisplayDirListWide(const std::tstring& BaseDir, const std::vector<CDirectory::CEntry>& dirlist, bool human, bool Ansi)
 {
     const int ScreenWidth = GetConsoleWidth();
     int Width = 12;
@@ -348,7 +326,7 @@ void DisplayDirListWide(const std::tstring& BaseDir, const std::vector<CDirector
     }
     if (Column != 0)
         _tprintf(TEXT("\n"));
-    DisplayDirListSummary(dirlist, nf, human);
+    DisplayDirListSummary(dirlist, human);
 }
 
 void DisplayDirListBare(const std::vector<CDirectory::CEntry>& dirlist)
@@ -363,7 +341,6 @@ void DisplayDirListBare(const std::vector<CDirectory::CEntry>& dirlist)
 
 struct Config
 {
-    bool UseThousandSep;
     bool GroupDirectoriesFirst;
     DirSorter::Order order;
     bool DisplayWideFormat;
@@ -394,7 +371,7 @@ std::tstring GetFullPathName(const TCHAR* lpFileName, std::tstring& Pattern)
     return path;
 }
 
-void DoDirectory(const Url& DirPattern, const Config& config, NumberFormat& nf)
+void DoDirectory(const Url& DirPattern, const Config& config)
 {
     std::vector<CDirectory::CEntry> dirlist;
     dirlist.reserve(1000);
@@ -415,9 +392,9 @@ void DoDirectory(const Url& DirPattern, const Config& config, NumberFormat& nf)
         if (config.DisplayBareFormat)
             DisplayDirListBare(dirlist);
         else if (config.DisplayWideFormat)
-            DisplayDirListWide(FullBaseDir, dirlist, &nf, config.Human, config.Ansi);
+            DisplayDirListWide(FullBaseDir, dirlist, config.Human, config.Ansi);
         else
-            DisplayDirListLong(FullBaseDir, dirlist, &nf, config.Human, DirPattern.IsLocal(), config.Ansi);
+            DisplayDirListLong(FullBaseDir, dirlist, config.Human, DirPattern.IsLocal(), config.Ansi);
         //_tprintf(TEXT("\n"));
     }
 
@@ -437,7 +414,7 @@ void DoDirectory(const Url& DirPattern, const Config& config, NumberFormat& nf)
                 {
                     Url SubDirPattern(Pattern == TEXT("*") ? it->GetFileName() : DirPattern + it->GetFileName());
                     SubDirPattern.AppendDelim();
-                    DoDirectory(SubDirPattern, config, nf);
+                    DoDirectory(SubDirPattern, config);
                 }
             }
         }
@@ -454,7 +431,7 @@ void DoDirectory(const Url& DirPattern, const Config& config, NumberFormat& nf)
                 {
                     Url SubDirPattern(BaseDir + it->GetFileName());
                     SubDirPattern.Change(Pattern);
-                    DoDirectory(SubDirPattern, config, nf);
+                    DoDirectory(SubDirPattern, config);
                 }
             }
         }
@@ -474,7 +451,6 @@ int tmain(int argc, TCHAR* argv[])
         bool DisplayWelcomeMsg = false;
         const TCHAR* DirPattern = TEXT("");
         Config config;
-        config.UseThousandSep = true;
         config.GroupDirectoriesFirst = true;
         config.order = DirSorter::Order::Name;
         config.DisplayWideFormat = true;
@@ -487,8 +463,6 @@ int tmain(int argc, TCHAR* argv[])
         BoolArg boolArg[] =
         {
             { TEXT('?'), &DisplayWelcomeMsg },
-            { TEXT('c'), &config.UseThousandSep },
-            { TEXT('C'), &config.UseThousandSep },
             { TEXT('w'), &config.DisplayWideFormat },
             { TEXT('W'), &config.DisplayWideFormat },
             { TEXT('b'), &config.DisplayBareFormat },
@@ -560,11 +534,6 @@ int tmain(int argc, TCHAR* argv[])
             ++arg;
         }
 
-        NumberFormat	nf(LOCALE_USER_DEFAULT);
-        //nf.NumDigits = 0;
-        if (!config.UseThousandSep)
-            nf.Grouping = 0;
-
         if (DisplayWelcomeMsg)
             DisplayWelcomeMessage(config.Ansi);
         else
@@ -573,7 +542,7 @@ int tmain(int argc, TCHAR* argv[])
             Url d(DirPattern);
             if (_tcschr(DirPattern, '*') == NULL && CDirectory::Exists(DirPattern)) // TODO Should this go in GetDirectory??
                 d.AppendDelim();
-            DoDirectory(d, config, nf);
+            DoDirectory(d, config);
         }
     }
     catch(const rad::WinError& e)
