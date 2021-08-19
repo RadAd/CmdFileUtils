@@ -99,20 +99,13 @@ void DisplayPadding(int Count)
 void DisplayTime(const FILETIME& time)
 {
     // TODO Need to test if this is showing ftp filetime correctly - may need to convert to localtime
-    TCHAR DateTime[1024];
-    DWORD dwFlags = FDTF_SHORTDATE | FDTF_SHORTTIME | FDTF_NOAUTOREADINGORDER;
-    SHFormatDateTime(&time, &dwFlags, DateTime, ARRAYSIZE(DateTime));
-    // TODO Time portion is correctly right aligned.
-    TCHAR* space = _tcschr(DateTime, _T(' '));
-    if (space != nullptr && space[2] == _T(':'))
-        //_tcscpy_s(space + 1, ARRAYSIZE(DateTime) - (space - DateTime) - 1, space);
-#ifdef UNICODE
-        wmemmove(space + 1, space, wcslen(space) + 1);
-#else
-        memmove(space + 1, space, wcslen(space) + 1);
-#endif
-
-    _tprintf(DateTime);
+    TCHAR Date[1024];
+    DWORD dwDateFlags = FDTF_SHORTDATE | FDTF_NOAUTOREADINGORDER;
+    SHFormatDateTime(&time, &dwDateFlags, Date, ARRAYSIZE(Date));
+    TCHAR Time[1024];
+    DWORD dwTimeFlags = FDTF_SHORTTIME | FDTF_NOAUTOREADINGORDER;
+    SHFormatDateTime(&time, &dwTimeFlags, Time, ARRAYSIZE(Time));
+    _tprintf(_T("%10s %8s"), Date, Time);
 }
 
 void DisplaySize(ULARGE_INTEGER size, bool human)
