@@ -365,11 +365,11 @@ void Url::Init(const TCHAR *url)
 {
     _tcscpy_s(m_Url, url);
     ZeroMemory(this, sizeof(URL_COMPONENTS));
-    m_Scheme[0] = '\0';
-    m_Host[0] = '\0';
-    m_User[0] = '\0';
-    m_Password[0] = '\0';
-    m_Path[0] = '\0';
+    m_Scheme[0] = TEXT('\0');
+    m_Host[0] = TEXT('\0');
+    m_User[0] = TEXT('\0');
+    m_Password[0] = TEXT('\0');
+    m_Path[0] = TEXT('\0');
     _tcscpy_s(m_Path, url);
 
     dwStructSize = sizeof(URL_COMPONENTS);
@@ -385,11 +385,23 @@ void Url::Init(const TCHAR *url)
     dwUrlPathLength = 1024;
     dwExtraInfoLength = 0;
     InternetCrackUrl(url, 0, 0, this);
+
+    if (nScheme == INTERNET_SCHEME_DEFAULT && m_Path[0] == TEXT('~'))
+    {
+        TCHAR home[MAX_PATH];
+        if ((GetEnvironmentVariable(TEXT("HOME"), home, ARRAYSIZE(home)) != 0) || (GetEnvironmentVariable(TEXT("USERPROFILE"), home, ARRAYSIZE(home)) != 0))
+        {
+            const size_t lenPath = _tcslen(m_Path);
+            const size_t lenHome = _tcslen(home);
+            wmemmove(m_Path + lenHome - 1 + 1, m_Path + 1, lenPath - 1 + 1);
+            wmemcpy(m_Path, home, lenHome);
+        }
+    }
 }
 
 void Url::Change(const TCHAR *subdir)
 {
-    if (lpszUrlPath[0] != '\0')
+    if (lpszUrlPath[0] != TEXT('\0'))
         AppendDelim();
     _tcscat_s(lpszUrlPath, ARRAYSIZE(m_Path), subdir);
     _tcscat_s(m_Url, subdir);
@@ -403,13 +415,13 @@ void Url::AppendDelim()
     if (lpszUrlPath[len - 1] != delim)
     {
         lpszUrlPath[len] = delim;
-        lpszUrlPath[len + 1] = '\0';
+        lpszUrlPath[len + 1] = TEXT('\0');
     }
     len = _tcslen(m_Url);
     if (m_Url[len - 1] != delim)
     {
         m_Url[len] = delim;
-        m_Url[len + 1] = '\0';
+        m_Url[len + 1] = TEXT('\0');
     }
 }
 
@@ -780,7 +792,7 @@ void GetDirectory(const Url& url, std::vector<CDirectory::CEntry>& dirlist, bool
     }
     else
     {
-        std::tstring search( url.GetUrl() );
+        std::tstring search( url.GetPath() );
         if (search.empty())
             search += TEXT("*.*");
         else if (*search.rbegin() == TEXT('.'))

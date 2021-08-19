@@ -377,7 +377,7 @@ void DoDirectory(const Url& DirPattern, const Config& config)
             _tprintf(TEXT("Directory: %s\n"), DirPattern.GetUrl());
 
         std::tstring FullPattern;
-        const std::tstring FullBaseDir = GetFullPathName(DirPattern.GetUrl(), FullPattern);
+        const std::tstring FullBaseDir = GetFullPathName(DirPattern.GetPath(), FullPattern);
 
         if (config.DisplayBareFormat)
             DisplayDirListBare(dirlist);
@@ -530,7 +530,7 @@ int tmain(int argc, TCHAR* argv[])
         {
             InitIniFileName();
             Url d(DirPattern);
-            if (_tcschr(DirPattern, '*') == NULL && CDirectory::Exists(DirPattern)) // TODO Should this go in GetDirectory??
+            if (d.nScheme == INTERNET_SCHEME_DEFAULT && _tcschr(d.GetPath(), _T('*')) == NULL && CDirectory::Exists(d.GetPath())) // TODO Should this go in GetDirectory??
                 d.AppendDelim();
             DoDirectory(d, config);
         }
