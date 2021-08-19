@@ -29,7 +29,6 @@
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-  <Import Project="$(SolutionDir)\RadWin32File\Default.props" />
   <ItemGroup>
     <ProjectReference Include="..\RadWin32File\RadWin32File.vcxproj">
       <Project>{56bd95ca-495c-4282-8826-f922ea44bd46}</Project>
@@ -43,6 +42,7 @@
   <ImportGroup Label="Shared">
   </ImportGroup>
   <ImportGroup Label="PropertySheets">
+    <Import Project="$(SolutionDir)\RadWin32File\Default.props" />
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
