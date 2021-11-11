@@ -795,7 +795,7 @@ void GetDirectory(const Url& url, std::vector<CDirectory::CEntry>& dirlist, bool
     }
     else
     {
-        std::tstring search(url.GetScheme() + std::tstring(TEXT(":")) + url.GetPath());
+        std::tstring search(*url.GetScheme() != TEXT('\0') ? url.GetScheme() + std::tstring(TEXT(":")) + url.GetPath() : url.GetPath());
         if (search.empty())
             search += TEXT("*.*");
         else if (*search.rbegin() == TEXT('.'))
