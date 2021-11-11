@@ -393,8 +393,10 @@ void Url::Init(const TCHAR *url)
         {
             const size_t lenPath = _tcslen(m_Path);
             const size_t lenHome = _tcslen(home);
-            wmemmove(m_Path + lenHome - 1 + 1, m_Path + 1, lenPath - 1 + 1);
-            wmemcpy(m_Path, home, lenHome);
+            m_Scheme[0] = home[0];
+            m_Scheme[1] = TEXT('\0');
+            wmemmove(m_Path + lenHome - 1 + 1 - 2, m_Path + 1, lenPath - 1 + 1);
+            wmemcpy(m_Path, home + 2, lenHome);
         }
     }
 }
@@ -758,6 +760,7 @@ void GetDirectory(const Url& url, std::vector<CDirectory::CEntry>& dirlist, bool
 
         TCHAR TempPath[MAX_PATH];
         _tcscpy_s(TempPath, url.lpszUrlPath);
+        TempPath[MAX_PATH - 1] = _T('\0');
         TCHAR* Search = _tcsrchr(TempPath, TEXT('/'));
         if (Search)
         {
@@ -792,7 +795,7 @@ void GetDirectory(const Url& url, std::vector<CDirectory::CEntry>& dirlist, bool
     }
     else
     {
-        std::tstring search( url.GetPath() );
+        std::tstring search(url.GetScheme() + std::tstring(TEXT(":")) + url.GetPath());
         if (search.empty())
             search += TEXT("*.*");
         else if (*search.rbegin() == TEXT('.'))
