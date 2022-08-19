@@ -44,8 +44,8 @@ void DisplayAboutMessage(HINSTANCE hInstance, const TCHAR *Product)
     }
 
     if (Ansi)
-        _tprintf(ANSI_COLOR_(37) TEXT("%s") ANSI_RESET TEXT(" Version") ANSI_COLOR_(37) TEXT(" %s\n") ANSI_RESET, Product, FileVersion);
+        _tprintf(ANSI_COLOR_(37) TEXT("%s") ANSI_RESET TEXT(" Version") ANSI_COLOR_(37) TEXT(" %s") ANSI_RESET TEXT("\n"), Product, FileVersion);
     else
-        _tprintf(TEXT("%s Version %s\n") ANSI_RESET, Product, FileVersion);
+        _tprintf(TEXT("%s Version %s\n"), Product, FileVersion);
     _tprintf(TEXT(" By Adam Gates (adamgates84+software@gmail.com) - https://github.com/RadAd/CmdFileUtils\n"));
 }
