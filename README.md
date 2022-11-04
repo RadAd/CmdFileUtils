@@ -1,6 +1,7 @@
 # CmdFileUtils
 ![Console](https://img.shields.io/badge/platform-Console-blue.svg)
 [![Releases](https://img.shields.io/github/release/RadAd/CmdFileUtils.svg)](https://github.com/RadAd/CmdFileUtils/releases/latest)
+[![commits-since](https://img.shields.io/github/commits-since/RadAd/CmdFileUtils/latest.svg)](commits/master)
 [![Build](https://img.shields.io/appveyor/ci/RadAd/CmdFileUtils.svg)](https://ci.appveyor.com/project/RadAd/CmdFileUtils)
 
 Command line utilties for file management
