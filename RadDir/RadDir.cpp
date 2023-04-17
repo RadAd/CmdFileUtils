@@ -209,8 +209,10 @@ void DisplayFileDataWide(const std::tstring& BaseDir, const CDirectory::CEntry& 
         _tprintf(TEXT("]"));
 }
 
-void DisplayFileDataBare(const CDirectory::CEntry& dir_entry)
+void DisplayFileDataBare(const std::tstring& BaseDir, const CDirectory::CEntry& dir_entry)
 {
+    if (!BaseDir.empty())
+        _tprintf(BaseDir.c_str());
     DisplayName(TEXT(""), dir_entry, false);
     _tprintf(TEXT("\n"));
 }
@@ -319,13 +321,13 @@ void DisplayDirListWide(const std::tstring& BaseDir, const std::vector<CDirector
     DisplayDirListSummary(dirlist, human);
 }
 
-void DisplayDirListBare(const std::vector<CDirectory::CEntry>& dirlist)
+void DisplayDirListBare(const std::tstring& BaseDir, const std::vector<CDirectory::CEntry>& dirlist)
 {
     for (std::vector<CDirectory::CEntry>::const_iterator it = dirlist.begin();
         it != dirlist.end(); ++it)
     {
         if (!it->IsDots())
-            DisplayFileDataBare(*it);
+            DisplayFileDataBare(BaseDir, *it);
     }
 }
 
@@ -373,14 +375,14 @@ void DoDirectory(const Url& DirPattern, const Config& config)
 
     if (!config.Recursive || !dirlist.empty())
     {
-        if (config.Recursive)
+        if (config.Recursive && !config.DisplayBareFormat)
             _tprintf(TEXT("Directory: %s\n"), DirPattern.GetUrl());
 
         std::tstring FullPattern;
         const std::tstring FullBaseDir = GetFullPathName(DirPattern.GetPath(), FullPattern);
 
         if (config.DisplayBareFormat)
-            DisplayDirListBare(dirlist);
+            DisplayDirListBare(config.Recursive ? DirPattern.GetPath() : TEXT(""), dirlist);
         else if (config.DisplayWideFormat)
             DisplayDirListWide(FullBaseDir, dirlist, config.Human, config.Ansi);
         else
@@ -400,7 +402,7 @@ void DoDirectory(const Url& DirPattern, const Config& config)
             for (std::vector<CDirectory::CEntry>::const_iterator it = dirlist.begin();
                 it != dirlist.end(); ++it)
             {
-                if (it->IsDirectory() && !it->IsDots())
+                if (it->IsDirectory() && !it->IsDots() && (config.DisplayHiddenFiles || !it->IsHidden()))
                 {
                     Url SubDirPattern(Pattern == TEXT("*") ? it->GetFileName() : DirPattern + it->GetFileName());
                     SubDirPattern.AppendDelim();
