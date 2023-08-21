@@ -368,6 +368,7 @@ std::tstring GetPath(LPCTSTR filepath)
     TCHAR path[1024];
     _tcscpy_s(path, filepath);
     PathRemoveFileSpec(path);
+    PathAddBackslash(path);
     return path;
 }
 
