@@ -363,6 +363,14 @@ std::tstring GetFullPathName(const TCHAR* lpFileName, std::tstring& Pattern)
     return path;
 }
 
+std::tstring GetPath(LPCTSTR filepath)
+{
+    TCHAR path[1024];
+    _tcscpy_s(path, filepath);
+    PathRemoveFileSpec(path);
+    return path;
+}
+
 void DoDirectory(const Url& DirPattern, const Config& config)
 {
     std::vector<CDirectory::CEntry> dirlist;
@@ -382,7 +390,7 @@ void DoDirectory(const Url& DirPattern, const Config& config)
         const std::tstring FullBaseDir = GetFullPathName(DirPattern.GetPath(), FullPattern);
 
         if (config.DisplayBareFormat)
-            DisplayDirListBare(config.Recursive ? DirPattern.GetPath() : TEXT(""), dirlist);
+            DisplayDirListBare(config.Recursive ? GetPath(DirPattern.GetPath()) : TEXT(""), dirlist);
         else if (config.DisplayWideFormat)
             DisplayDirListWide(FullBaseDir, dirlist, config.Human, config.Ansi);
         else
