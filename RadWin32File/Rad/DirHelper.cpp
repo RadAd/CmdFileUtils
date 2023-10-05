@@ -16,7 +16,7 @@
 
 ULARGE_INTEGER ToFileSize(ULONGLONG s)
 {
-    ULARGE_INTEGER size;
+    ULARGE_INTEGER size = {};
     size.QuadPart = s;
     return size;
 }
@@ -772,7 +772,7 @@ void GetDirectory(const Url& url, std::vector<CDirectory::CEntry>& dirlist, bool
             if (!FtpSetCurrentDirectory(ftp.Get(), TempPath))
                 ThrowWinInetError();
 
-        CDirectory::CEntry  dir_entry;
+        CDirectory::CEntry  dir_entry = {};
         CWinInetHandle find = FtpFindFirstFile(ftp.Get(), Search, &dir_entry, 0, 0);
         // NOTE dir_entry.ftLastWriteTime /etc are in the local time zone
         if (find.Get() != NULL)

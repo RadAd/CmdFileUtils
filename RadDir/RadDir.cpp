@@ -12,6 +12,8 @@
 #include <Rad/About/AboutMessage.h>
 #include <Rad/DirHelper.h>
 
+#include <set>
+
 //#include "Environment.H"
 
 #define ESC TEXT("\x1B")
@@ -372,10 +374,24 @@ std::tstring GetPath(LPCTSTR filepath)
     return path;
 }
 
-void DoDirectory(const Url& DirPattern, const Config& config)
+void DoDirectory(const Url& DirPattern, const Config& config, std::set<std::tstring>& visited)
 {
     try
     {
+        std::tstring FullPattern;
+        const std::tstring FullBaseDir = GetFullPathName(DirPattern.GetPath(), FullPattern);
+        {
+            TCHAR RealPath[MAX_PATH];
+            GetRealPath(FullBaseDir.c_str(), RealPath, ARRAYSIZE(RealPath));
+
+            if (visited.find(RealPath) != visited.end())
+            {
+                _ftprintf(stderr, ANSI_COLOR_(31) _T("Infinite loop detected: %s\n") ANSI_RESET, DirPattern.GetPath());
+                return;
+            }
+            visited.insert(RealPath);
+        }
+
         std::vector<CDirectory::CEntry> dirlist;
         dirlist.reserve(1000);
 
@@ -389,8 +405,8 @@ void DoDirectory(const Url& DirPattern, const Config& config)
             if (config.Recursive && !config.DisplayBareFormat)
                 _tprintf(TEXT("Directory: %s\n"), DirPattern.GetUrl());
 
-            std::tstring FullPattern;
-            const std::tstring FullBaseDir = GetFullPathName(DirPattern.GetPath(), FullPattern);
+            //std::tstring FullPattern;
+            //const std::tstring FullBaseDir = GetFullPathName(DirPattern.GetPath(), FullPattern);
 
             if (config.DisplayBareFormat)
                 DisplayDirListBare(config.Recursive ? GetPath(DirPattern.GetPath()) : TEXT(""), dirlist);
@@ -417,7 +433,7 @@ void DoDirectory(const Url& DirPattern, const Config& config)
                     {
                         Url SubDirPattern(Pattern == TEXT("*") ? it->GetFileName() : DirPattern + it->GetFileName());
                         SubDirPattern.AppendDelim();
-                        DoDirectory(SubDirPattern, config);
+                        DoDirectory(SubDirPattern, config, visited);
                     }
                 }
             }
@@ -434,7 +450,7 @@ void DoDirectory(const Url& DirPattern, const Config& config)
                     {
                         Url SubDirPattern(BaseDir + it->GetFileName());
                         SubDirPattern.Change(Pattern);
-                        DoDirectory(SubDirPattern, config);
+                        DoDirectory(SubDirPattern, config, visited);
                     }
                 }
             }
@@ -461,7 +477,7 @@ int tmain(int argc, TCHAR* argv[])
     {
         bool DisplayWelcomeMsg = false;
         const TCHAR* DirPattern = TEXT("");
-        Config config;
+        Config config = {};
         config.GroupDirectoriesFirst = true;
         config.order = DirSorter::Order::Name;
         config.DisplayWideFormat = true;
@@ -553,7 +569,8 @@ int tmain(int argc, TCHAR* argv[])
             Url d(DirPattern);
             if (d.nScheme == INTERNET_SCHEME_DEFAULT && _tcschr(d.GetPath(), _T('*')) == NULL && CDirectory::Exists(d.GetPath())) // TODO Should this go in GetDirectory??
                 d.AppendDelim();
-            DoDirectory(d, config);
+            std::set<std::tstring> visited;
+            DoDirectory(d, config, visited);
         }
     }
     catch(const rad::WinError& e)
