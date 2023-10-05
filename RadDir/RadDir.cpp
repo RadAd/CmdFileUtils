@@ -374,68 +374,78 @@ std::tstring GetPath(LPCTSTR filepath)
 
 void DoDirectory(const Url& DirPattern, const Config& config)
 {
-    std::vector<CDirectory::CEntry> dirlist;
-    dirlist.reserve(1000);
-
-    GetDirectory(DirPattern, dirlist, config.DisplayHiddenFiles);
-
-    if (config.order != DirSorter::Order::None)
-        SortDirectory(dirlist, DirSorter(config.order, config.GroupDirectoriesFirst));
-
-    if (!config.Recursive || !dirlist.empty())
+    try
     {
-        if (config.Recursive && !config.DisplayBareFormat)
-            _tprintf(TEXT("Directory: %s\n"), DirPattern.GetUrl());
+        std::vector<CDirectory::CEntry> dirlist;
+        dirlist.reserve(1000);
 
-        std::tstring FullPattern;
-        const std::tstring FullBaseDir = GetFullPathName(DirPattern.GetPath(), FullPattern);
+        GetDirectory(DirPattern, dirlist, config.DisplayHiddenFiles);
 
-        if (config.DisplayBareFormat)
-            DisplayDirListBare(config.Recursive ? GetPath(DirPattern.GetPath()) : TEXT(""), dirlist);
-        else if (config.DisplayWideFormat)
-            DisplayDirListWide(FullBaseDir, dirlist, config.Human, config.Ansi);
-        else
-            DisplayDirListLong(FullBaseDir, dirlist, config.Human, config.Ansi);
-        //_tprintf(TEXT("\n"));
+        if (config.order != DirSorter::Order::None)
+            SortDirectory(dirlist, DirSorter(config.order, config.GroupDirectoriesFirst));
+
+        if (!config.Recursive || !dirlist.empty())
+        {
+            if (config.Recursive && !config.DisplayBareFormat)
+                _tprintf(TEXT("Directory: %s\n"), DirPattern.GetUrl());
+
+            std::tstring FullPattern;
+            const std::tstring FullBaseDir = GetFullPathName(DirPattern.GetPath(), FullPattern);
+
+            if (config.DisplayBareFormat)
+                DisplayDirListBare(config.Recursive ? GetPath(DirPattern.GetPath()) : TEXT(""), dirlist);
+            else if (config.DisplayWideFormat)
+                DisplayDirListWide(FullBaseDir, dirlist, config.Human, config.Ansi);
+            else
+                DisplayDirListLong(FullBaseDir, dirlist, config.Human, config.Ansi);
+            //_tprintf(TEXT("\n"));
+        }
+
+        if (config.Recursive)
+        {
+            const TCHAR* last = _tcsrchr(DirPattern.GetUrl(), DirPattern.GetDelim());
+
+            const std::tstring Pattern(last ? last + 1 : DirPattern.GetUrl());
+
+            // This is is really try to decide if we already have the subdirectories
+            if (Pattern.empty() || Pattern == TEXT("*") || (Pattern.find(TEXT('*')) == std::tstring::npos && Pattern.find(TEXT('?')) == std::tstring::npos))
+            {
+                for (std::vector<CDirectory::CEntry>::const_iterator it = dirlist.begin();
+                    it != dirlist.end(); ++it)
+                {
+                    if (it->IsDirectory() && !it->IsDots() && (config.DisplayHiddenFiles || !it->IsHidden()))
+                    {
+                        Url SubDirPattern(Pattern == TEXT("*") ? it->GetFileName() : DirPattern + it->GetFileName());
+                        SubDirPattern.AppendDelim();
+                        DoDirectory(SubDirPattern, config);
+                    }
+                }
+            }
+            else
+            {
+                const std::tstring BaseDir = last ? std::tstring(DirPattern.GetUrl(), last + 1) : std::tstring();
+
+                // TODO Get the directory again without the pattern
+                GetDirectory(BaseDir.c_str(), dirlist, config.DisplayHiddenFiles);
+                for (std::vector<CDirectory::CEntry>::const_iterator it = dirlist.begin();
+                    it != dirlist.end(); ++it)
+                {
+                    if (it->IsDirectory() && !it->IsDots())
+                    {
+                        Url SubDirPattern(BaseDir + it->GetFileName());
+                        SubDirPattern.Change(Pattern);
+                        DoDirectory(SubDirPattern, config);
+                    }
+                }
+            }
+        }
     }
-
-    if (config.Recursive)
+    catch (const rad::WinError& e)
     {
-        const TCHAR* last = _tcsrchr(DirPattern.GetUrl(), DirPattern.GetDelim());
-
-        const std::tstring Pattern(last ? last + 1 : DirPattern.GetUrl());
-
-        // This is is really try to decide if we already have the subdirectories
-        if (Pattern.empty() || Pattern == TEXT("*") || (Pattern.find(TEXT('*')) == std::tstring::npos && Pattern.find(TEXT('?')) == std::tstring::npos))
-        {
-            for (std::vector<CDirectory::CEntry>::const_iterator it = dirlist.begin();
-                it != dirlist.end(); ++it)
-            {
-                if (it->IsDirectory() && !it->IsDots() && (config.DisplayHiddenFiles || !it->IsHidden()))
-                {
-                    Url SubDirPattern(Pattern == TEXT("*") ? it->GetFileName() : DirPattern + it->GetFileName());
-                    SubDirPattern.AppendDelim();
-                    DoDirectory(SubDirPattern, config);
-                }
-            }
-        }
+        if (config.Recursive)
+            _ftprintf(stderr, ANSI_COLOR_(31) _T("%s") ANSI_RESET, e.GetString().c_str());
         else
-        {
-            const std::tstring BaseDir = last ? std::tstring(DirPattern.GetUrl(), last + 1) : std::tstring();
-
-            // TODO Get the directory again without the pattern
-            GetDirectory(BaseDir.c_str(), dirlist, config.DisplayHiddenFiles);
-            for (std::vector<CDirectory::CEntry>::const_iterator it = dirlist.begin();
-                it != dirlist.end(); ++it)
-            {
-                if (it->IsDirectory() && !it->IsDots())
-                {
-                    Url SubDirPattern(BaseDir + it->GetFileName());
-                    SubDirPattern.Change(Pattern);
-                    DoDirectory(SubDirPattern, config);
-                }
-            }
-        }
+            throw;
     }
 }
 
@@ -548,12 +558,12 @@ int tmain(int argc, TCHAR* argv[])
     }
     catch(const rad::WinError& e)
     {
-        _ftprintf(stderr, e.GetString().c_str());
+        _ftprintf(stderr, ANSI_COLOR_(31) _T("%s") ANSI_RESET, e.GetString().c_str());
         return EXIT_FAILURE + 0;
     }
     catch(...)
     {
-        _ftprintf(stderr, TEXT("Unknown Exception\n"));
+        _ftprintf(stderr, ANSI_COLOR_(31) _T("%s") ANSI_RESET, TEXT("Unknown Exception\n"));
         return EXIT_FAILURE + 1;
     }
 
