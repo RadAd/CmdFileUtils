@@ -567,7 +567,8 @@ int tmain(int argc, TCHAR* argv[])
         {
             InitIniFileName();
             Url d(DirPattern);
-            if (d.nScheme == INTERNET_SCHEME_DEFAULT && _tcschr(d.GetPath(), _T('*')) == NULL && CDirectory::Exists(d.GetPath())) // TODO Should this go in GetDirectory??
+            if ((d.nScheme == INTERNET_SCHEME_UNKNOWN || d.nScheme == INTERNET_SCHEME_DEFAULT )
+                && _tcschr(d.GetPath(), _T('*')) == NULL && CDirectory::Exists(d.GetPath())) // TODO Should this go in GetDirectory??
                 d.AppendDelim();
             std::set<std::tstring> visited;
             DoDirectory(d, config, visited);
