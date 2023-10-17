@@ -381,15 +381,16 @@ void DoDirectory(const Url& DirPattern, const Config& config, std::set<std::tstr
         std::tstring FullPattern;
         const std::tstring FullBaseDir = GetFullPathName(DirPattern.GetPath(), FullPattern);
         {
-            TCHAR RealPath[MAX_PATH];
-            GetRealPath(FullBaseDir.c_str(), RealPath, ARRAYSIZE(RealPath));
-
-            if (visited.find(RealPath) != visited.end())
+            TCHAR RealPath[MAX_PATH] = TEXT("");
+            if (GetRealPath(FullBaseDir.c_str(), RealPath, ARRAYSIZE(RealPath)))
             {
-                _ftprintf(stderr, ANSI_COLOR_(31) _T("Infinite loop detected: %s\n") ANSI_RESET, DirPattern.GetPath());
-                return;
+                if (visited.find(RealPath) != visited.end())
+                {
+                    _ftprintf(stderr, ANSI_COLOR_(31) _T("Infinite loop detected: %s\n") ANSI_RESET, DirPattern.GetPath());
+                    return;
+                }
+                visited.insert(RealPath);
             }
-            visited.insert(RealPath);
         }
 
         std::vector<CDirectory::CEntry> dirlist;
