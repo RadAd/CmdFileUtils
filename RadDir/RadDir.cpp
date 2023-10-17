@@ -374,22 +374,23 @@ std::tstring GetPath(LPCTSTR filepath)
     return path;
 }
 
-void DoDirectory(const Url& DirPattern, const Config& config, std::set<std::tstring>& visited)
+void DoDirectory(const Url& DirPattern, const Config& config, const std::tstring& ParentRealPath)
 {
     try
     {
         std::tstring FullPattern;
         const std::tstring FullBaseDir = GetFullPathName(DirPattern.GetPath(), FullPattern);
+        std::tstring RealPath;
         {
-            TCHAR RealPath[MAX_PATH] = TEXT("");
-            if (GetRealPath(FullBaseDir.c_str(), RealPath, ARRAYSIZE(RealPath)))
+            TCHAR strRealPath[MAX_PATH] = TEXT("");
+            if (GetRealPath(FullBaseDir.c_str(), strRealPath, ARRAYSIZE(strRealPath)))
             {
-                if (visited.find(RealPath) != visited.end())
+                RealPath = strRealPath;
+                if (ParentRealPath.length() >= RealPath.length() && ParentRealPath.compare(0, RealPath.length(), RealPath) == 0)
                 {
                     _ftprintf(stderr, ANSI_COLOR_(31) _T("Infinite loop detected: %s\n") ANSI_RESET, DirPattern.GetPath());
                     return;
                 }
-                visited.insert(RealPath);
             }
         }
 
@@ -434,7 +435,7 @@ void DoDirectory(const Url& DirPattern, const Config& config, std::set<std::tstr
                     {
                         Url SubDirPattern(Pattern == TEXT("*") ? it->GetFileName() : DirPattern + it->GetFileName());
                         SubDirPattern.AppendDelim();
-                        DoDirectory(SubDirPattern, config, visited);
+                        DoDirectory(SubDirPattern, config, RealPath);
                     }
                 }
             }
@@ -451,7 +452,7 @@ void DoDirectory(const Url& DirPattern, const Config& config, std::set<std::tstr
                     {
                         Url SubDirPattern(BaseDir + it->GetFileName());
                         SubDirPattern.Change(Pattern);
-                        DoDirectory(SubDirPattern, config, visited);
+                        DoDirectory(SubDirPattern, config, RealPath);
                     }
                 }
             }
@@ -571,8 +572,7 @@ int tmain(int argc, TCHAR* argv[])
             if ((d.nScheme == INTERNET_SCHEME_UNKNOWN || d.nScheme == INTERNET_SCHEME_DEFAULT )
                 && _tcschr(d.GetPath(), _T('*')) == NULL && CDirectory::Exists(d.GetPath())) // TODO Should this go in GetDirectory??
                 d.AppendDelim();
-            std::set<std::tstring> visited;
-            DoDirectory(d, config, visited);
+            DoDirectory(d, config, std::tstring());
         }
     }
     catch(const rad::WinError& e)
