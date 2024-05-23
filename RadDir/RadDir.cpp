@@ -426,7 +426,7 @@ void DoDirectory(const Url& DirPattern, const Config& config, const std::tstring
             const std::tstring Pattern(last ? last + 1 : DirPattern.GetUrl());
 
             // This is is really try to decide if we already have the subdirectories
-            if (Pattern.empty() || Pattern == TEXT("*") || (Pattern.find(TEXT('*')) == std::tstring::npos && Pattern.find(TEXT('?')) == std::tstring::npos))
+            if (Pattern.empty() || Pattern == TEXT("*")) // || (Pattern.find(TEXT('*')) == std::tstring::npos && Pattern.find(TEXT('?')) == std::tstring::npos))
             {
                 for (std::vector<CDirectory::CEntry>::const_iterator it = dirlist.begin();
                     it != dirlist.end(); ++it)
