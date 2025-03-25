@@ -559,7 +559,14 @@ int tmain(int argc, TCHAR* argv[])
                 }
             }
             else
+            {
+                // Fix a common problem where the argument has a directory separator at the
+                // end and in quotes. This is interpreted as an escape for the quotes.
+                const size_t len = _tcslen(argv[arg]);
+                if (argv[arg][len - 1] == TEXT('"'))
+                    argv[arg][len - 1] = TEXT('\\');
                 DirPattern = argv[arg];
+            }
             ++arg;
         }
 
